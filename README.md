@@ -50,37 +50,41 @@ Before running the application, make sure you have the following installed on yo
 
 ```text
 Unify/
-├── backend/
-│   ├── config/             # Database & Socket initializers
-│   ├── controllers/        # Request handlers (Auth, Users, Messages)
-│   ├── middleware/         # JWT verification, upload handling & rate limiting
-│   ├── models/             # Mongoose schemas (User.js, Message.js, Conversation.js)
-│   ├── routes/             # REST API routes (/api/v1/...)
-│   ├── uploads/            # Media uploads temporary folder
-│   ├── utils/              # Token generators & custom helpers
-│   ├── server.js           # Express + Socket server entrance point
-│   ├── .env.example        # Backend environment template
-│   └── package.json
-│
-└── frontend/
-    ├── public/             # Static public assets
-    ├── src/
-    │   ├── assets/         # Styles & brand media
-    │   ├── components/     # Reusable UI components (Buttons, Avatars, Modals)
-    │   ├── context/        # React Contexts (AuthContext, SocketContext, ChatContext)
-    │   ├── hooks/          # Custom hooks (useSocket, useAuth, useChat)
-    │   ├── layouts/        # Layout wrappers (Dashboard, Auth)
-    │   ├── pages/          # Full page views (Landing, Login, Register, Dashboard)
-    │   ├── services/       # Axios API client handlers
-    │   ├── App.jsx         # Application routes definition
-    │   └── main.jsx        # App entry point
-    ├── .env.example        # Frontend environment template
-    ├── tailwind.config.js  # Styling configuration rules
-    ├── vite.config.js      # Vite build setup
-    └── package.json
+├── docs/                      # Technical specification & architecture design documents
+│   ├── system_design.md
+│   ├── database_design.md
+│   ├── api_design.md
+│   ├── socket_event_design.md
+│   └── requirements_analysis.md
+├── backend/                   # Node.js, Express, Socket.IO & MongoDB Backend Server
+│   ├── config/                # Database connection & server configuration
+│   ├── controllers/           # Route controller logic
+│   ├── middleware/            # Auth & file upload middlewares
+│   ├── models/                # Mongoose database schemas (e.g., User.js)
+│   ├── routes/                # Express API routes
+│   ├── uploads/               # Stored media & attachment uploads
+│   ├── utils/                 # Helper functions & utilities
+│   ├── package.json           # Backend dependencies & script definitions
+│   └── .env                   # Environment variables
+├── frontend/                  # React + Vite Frontend Application
+│   ├── public/                # Static public assets
+│   ├── src/
+│   │   ├── assets/            # CSS, images, and visual icons
+│   │   ├── components/        # UI components (Chat, Sidebar, Modals)
+│   │   ├── context/           # React context providers (AuthContext, SocketContext)
+│   │   ├── hooks/             # Custom React hooks
+│   │   ├── layouts/           # Page layout wrappers
+│   │   ├── pages/             # Page views (Login, Register, Chat View)
+│   │   ├── services/          # API & socket connection service callers
+│   │   ├── utils/             # Helper functions & formatting utilities
+│   │   ├── App.jsx            # Main app router component
+│   │   ├── main.jsx           # Vite application entry point
+│   │   ├── App.css            # Component styles
+│   │   └── index.css          # Base CSS & design tokens
+│   ├── package.json           # Frontend dependencies & scripts
+│   └── vite.config.js         # Vite bundler configuration
+└── README.md                  # Project overview documentation
 ```
-
----
 
 ## ⚡ Quick Start Guide
 
