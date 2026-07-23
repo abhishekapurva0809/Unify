@@ -1,0 +1,86 @@
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+/**
+ * User Schema Definition
+ * Represents a user account within the Unify platform.
+ */
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, 'Please provide a name'],
+      trim: true,
+      maxlength: [50, 'Name cannot exceed 50 characters'],
+    },
+    email: {
+      type: String,
+      required: [true, 'Please provide an email address'],
+      unique: true,
+      trim: true,
+      lowercase: true,
+      match: [
+        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+        'Please provide a valid email address',
+      ],
+      index: true,
+    },
+    password: {
+      type: String,
+      required: [true, 'Please provide a password'],
+      minlength: [6, 'Password must be at least 6 characters long'],
+      select: false, // Exclude password field by default on queries for security
+    },
+    avatar: {
+      type: String,
+      default: '', // Stores image URL or relative path
+    },
+    status: {
+      type: String,
+      enum: ['online', 'offline', 'away', 'busy'],
+      default: 'offline',
+    },
+    lastSeen: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: true, // Automatically manages createdAt and updatedAt fields
+  }
+);
+
+/**
+ * Pre-save Middleware Hook
+ * Automatically hashes password using bcryptjs before saving document to MongoDB.
+ */
+userSchema.pre('save', async function (next) {
+  // Only hash password if it has been modified (or is new)
+  if (!this.isModified('password')) {
+    return next();
+  }
+
+  try {
+    // Generate salt with 10 rounds
+    const salt = await bcrypt.genSalt(10);
+    // Hash password using generated salt
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Instance Method: matchPassword
+ * Compares an entered plain text password with the hashed password stored in the database.
+ * @param {string} enteredPassword - The plain text password entered by user during login
+ * @returns {Promise<boolean>} - True if passwords match, false otherwise
+ */
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+const User = mongoose.model('User', userSchema);
+
+module.exports = User;
