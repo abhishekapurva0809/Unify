@@ -106,7 +106,7 @@ Follow these steps to get your local development environment up and running.
    ```
 4. Open the `.env` file and configure your variables:
    ```env
-   PORT=5000
+   PORT=8090
    MONGO_URI=mongodb://127.0.0.1:27017/unify_db
    JWT_SECRET=your_super_secret_jwt_key
    NODE_ENV=development
@@ -133,8 +133,8 @@ Follow these steps to get your local development environment up and running.
    ```
 4. Open the `.env` file and set the API and Socket server URLs:
    ```env
-   VITE_API_BASE_URL=http://localhost:5000/api/v1
-   VITE_SOCKET_SERVER_URL=http://localhost:5000
+   VITE_API_BASE_URL=http://localhost:8090/api/v1
+   VITE_SOCKET_SERVER_URL=http://localhost:8090
    ```
 5. Start the Vite development server:
    ```bash
