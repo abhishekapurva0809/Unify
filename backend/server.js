@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,11 @@ app.get('/api/v1/health', (req, res) => {
 
 // API Routes
 app.use('/api/v1/auth', require('./routes/authRoutes'));
+app.use('/api/v1/users', require('./routes/userRoutes'));
+
+// Error Middleware Pipelines
+app.use(notFound);
+app.use(errorHandler);
 
 // Start Express Server
 const PORT = process.env.PORT || 5000;
