@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import useAuth from '../hooks/useAuth';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +11,8 @@ const Register = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const { name, email, password, confirmPassword } = formData;
@@ -25,7 +28,6 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Client-side validations
     if (!name || !email || !password || !confirmPassword) {
       setError('Please fill in all required fields.');
       return;
@@ -45,18 +47,15 @@ const Register = () => {
       setLoading(true);
       setError('');
 
-      // Temporary placeholder submission until Axios & AuthContext integration in 4.3 & 4.4
-      console.log('Registering user:', { name, email, password });
-
-      // Simulate API delay for demonstration
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await register({ name, email, password });
 
       setLoading(false);
-      // Navigate to dashboard upon successful registration
       navigate('/dashboard');
     } catch (err) {
       setLoading(false);
-      setError(err.message || 'Registration failed. Please try again.');
+      const message =
+        err.response?.data?.message || err.message || 'Registration failed. Please try again.';
+      setError(message);
     }
   };
 
@@ -81,7 +80,7 @@ const Register = () => {
 
         {/* Error Alert Display */}
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-3 animate-fade-in">
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-3">
             <span className="text-lg">⚠️</span>
             <span>{error}</span>
           </div>

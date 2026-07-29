@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import useAuth from '../hooks/useAuth';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -8,6 +9,8 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const { email, password } = formData;
@@ -23,7 +26,6 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Client-side validation
     if (!email || !password) {
       setError('Please fill in all required fields.');
       return;
@@ -33,18 +35,15 @@ const Login = () => {
       setLoading(true);
       setError('');
 
-      // Temporary placeholder submission until Axios & AuthContext integration in 4.3 & 4.4
-      console.log('Logging in user with:', { email, password });
-      
-      // Simulate API delay for demonstration
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await login({ email, password });
 
       setLoading(false);
-      // Navigate to dashboard upon successful login
       navigate('/dashboard');
     } catch (err) {
       setLoading(false);
-      setError(err.message || 'Login failed. Please check your credentials.');
+      const message =
+        err.response?.data?.message || err.message || 'Login failed. Please check your credentials.';
+      setError(message);
     }
   };
 
@@ -69,7 +68,7 @@ const Login = () => {
 
         {/* Error Alert Display */}
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-3 animate-fade-in">
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-3">
             <span className="text-lg">⚠️</span>
             <span>{error}</span>
           </div>
