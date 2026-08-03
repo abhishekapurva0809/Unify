@@ -81,7 +81,51 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Search registered users by name or email
+ * @route   GET /api/v1/users/search?q=keyword
+ * @access  Private (Protected by authMiddleware)
+ */
+const searchUsers = async (req, res) => {
+  try {
+    const keyword = req.query.q || req.query.search;
+
+    if (!keyword) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    // Build regex search filter matching name or email (case-insensitive)
+    const searchFilter = {
+      $or: [
+        { name: { $regex: keyword, $options: 'i' } },
+        { email: { $regex: keyword, $options: 'i' } },
+      ],
+      // Exclude the currently logged-in user from search results
+      _id: { $ne: req.user._id },
+    };
+
+    const users = await User.find(searchFilter)
+      .select('name email avatar status lastSeen')
+      .limit(20);
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error searching users',
+    });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
+  searchUsers,
 };
