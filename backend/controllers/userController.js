@@ -124,8 +124,56 @@ const searchUsers = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Upload user avatar image
+ * @route   POST /api/v1/users/avatar
+ * @access  Private (Protected by authMiddleware & uploadMiddleware)
+ */
+const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload an image file',
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (user) {
+      // Relative static path for image access (/uploads/avatar-123.jpg)
+      const avatarPath = `/uploads/${req.file.filename}`;
+      user.avatar = avatarPath;
+
+      const updatedUser = await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Avatar uploaded successfully',
+        data: {
+          _id: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          avatar: updatedUser.avatar,
+        },
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error uploading avatar',
+    });
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
   searchUsers,
+  uploadAvatar,
 };

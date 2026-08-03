@@ -16,3 +16,13 @@ export const updateUserProfileApi = async (updateData) => {
   const response = await API.put('/users/profile', updateData);
   return response.data;
 };
+
+// Upload user avatar image (multipart/form-data)
+export const uploadAvatarApi = async (formData) => {
+  const response = await API.post('/users/avatar', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
