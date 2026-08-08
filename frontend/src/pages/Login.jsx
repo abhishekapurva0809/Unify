@@ -48,87 +48,113 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6 selection:bg-indigo-500 selection:text-white">
-      {/* Decorative Atmosphere Glow Effects */}
-      <div className="fixed top-0 right-0 -z-10 w-[500px] h-[500px] opacity-15 blur-[140px] rounded-full bg-indigo-600 pointer-events-none" />
-      <div className="fixed bottom-0 left-0 -z-10 w-[400px] h-[400px] opacity-10 blur-[120px] rounded-full bg-purple-600 pointer-events-none" />
+    <div className="min-h-screen bg-[#FAF8FF] text-[#131B2E] flex items-center justify-center p-6 selection:bg-[#4F46E5] selection:text-white relative overflow-hidden">
+      {/* Subtle Parallax Background Atmosphere Glows */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#4F46E5]/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#6063EE]/5 blur-[120px] rounded-full pointer-events-none" />
 
-      <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl shadow-indigo-950/50">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-block">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center font-bold text-2xl mx-auto mb-4 shadow-lg shadow-indigo-500/30 hover:scale-105 transition-transform">
-              U
+      <main className="w-full max-w-[440px] z-10">
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 shadow-xl shadow-slate-200/50 flex flex-col gap-6">
+          {/* Brand Logo & Header */}
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Link to="/" className="inline-block">
+              <div className="w-12 h-12 bg-[#4F46E5] rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-md shadow-[#4F46E5]/20 hover:scale-105 transition-transform">
+                U
+              </div>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-[#131B2E]">Unify</h1>
+              <p className="text-sm text-[#464555] mt-1 font-medium">Welcome back</p>
             </div>
-          </Link>
-          <h2 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-            Welcome Back
-          </h2>
-          <p className="text-slate-400 text-sm mt-2">Sign in to your Unify account</p>
-        </div>
-
-        {/* Error Alert Display */}
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center gap-3">
-            <span className="text-lg">⚠️</span>
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-2">Email Address</label>
-            <input
-              type="email"
-              name="email"
-              value={email}
-              onChange={handleChange}
-              placeholder="alex@unify.com"
-              required
-              className="w-full px-4 py-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-sm"
-            />
           </div>
 
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-semibold text-slate-300">Password</label>
+          {/* Social Logins */}
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                type="button"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 border border-[#E2E8F0] rounded-xl text-sm font-semibold text-[#131B2E] hover:bg-[#F2F3FF] transition-colors"
+              >
+                <span>🌐</span> Google
+              </button>
+              <button 
+                type="button"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 border border-[#E2E8F0] rounded-xl text-sm font-semibold text-[#131B2E] hover:bg-[#F2F3FF] transition-colors"
+              >
+                <span>💻</span> GitHub
+              </button>
             </div>
-            <input
-              type="password"
-              name="password"
-              value={password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              required
-              className="w-full px-4 py-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-sm"
-            />
+
+            <div className="flex items-center gap-3 py-2">
+              <div className="h-[1px] bg-[#E2E8F0] flex-1" />
+              <span className="text-[11px] font-semibold text-[#777587] uppercase tracking-wider">or continue with email</span>
+              <div className="h-[1px] bg-[#E2E8F0] flex-1" />
+            </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
+          {/* Error Display */}
+          {error && (
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold flex items-center gap-2">
+              <span>⚠️</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Form */}
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-[#131B2E]" htmlFor="email">Email address</label>
+              <input
+                id="email"
+                type="email"
+                name="email"
+                value={email}
+                onChange={handleChange}
+                placeholder="name@company.com"
+                required
+                className="w-full h-11 px-4 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#131B2E] placeholder-[#777587] focus:outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20 transition-all"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold text-[#131B2E]" htmlFor="password">Password</label>
+                <a href="#" className="text-xs font-semibold text-[#4F46E5] hover:underline">Forgot password?</a>
+              </div>
+              <input
+                id="password"
+                type="password"
+                name="password"
+                value={password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                required
+                className="w-full h-11 px-4 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#131B2E] placeholder-[#777587] focus:outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/20 transition-all"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 mt-2 bg-[#4F46E5] hover:bg-[#3525CD] text-white font-bold rounded-xl shadow-md shadow-[#4F46E5]/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? (
                 <span>Signing In...</span>
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </button>
-        </form>
+              ) : (
+                'Log In'
+              )}
+            </button>
+          </form>
 
-        <p className="text-center text-slate-400 text-sm mt-8">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-indigo-400 font-semibold hover:underline">
-            Create an account
-          </Link>
-        </p>
-      </div>
+          {/* Footer Link */}
+          <p className="text-center text-xs text-[#464555]">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-[#4F46E5] font-bold hover:underline">
+              Create an account
+            </Link>
+          </p>
+        </div>
+      </main>
     </div>
   );
 };

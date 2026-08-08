@@ -3,27 +3,27 @@ import { Link } from 'react-router-dom';
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col justify-between">
+    <div className="min-h-screen bg-[#FAF8FF] text-[#131B2E] flex flex-col justify-between selection:bg-[#4F46E5] selection:text-white">
       {/* Header Navigation */}
-      <header className="px-8 py-6 flex items-center justify-between border-b border-slate-800">
+      <header className="px-8 py-5 flex items-center justify-between bg-white border-b border-[#E2E8F0] shadow-sm sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30">
+          <div className="w-10 h-10 rounded-xl bg-[#4F46E5] flex items-center justify-center font-bold text-xl text-white shadow-md shadow-[#4F46E5]/20">
             U
           </div>
-          <span className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+          <span className="text-2xl font-extrabold tracking-tight text-[#3525CD]">
             Unify
           </span>
         </div>
         <div className="flex items-center gap-4">
           <Link
             to="/login"
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#464555] hover:text-[#3525CD] hover:bg-[#F2F3FF] transition-all"
           >
-            Sign In
+            Log In
           </Link>
           <Link
             to="/register"
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95"
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#4F46E5] hover:bg-[#3525CD] text-white shadow-md shadow-[#4F46E5]/20 transition-all hover:scale-105 active:scale-95"
           >
             Get Started
           </Link>
@@ -31,39 +31,93 @@ const Landing = () => {
       </header>
 
       {/* Hero Section */}
-      <main className="max-w-5xl mx-auto px-6 py-20 text-center flex-1 flex flex-col justify-center items-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-sm font-medium mb-8">
-          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-          Next-Generation Real-Time Messaging
+      <main className="max-w-6xl mx-auto px-6 py-16 text-center flex-1 flex flex-col justify-center items-center">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#EAEDFF] border border-[#C7C4D8]/50 text-[#3525CD] text-sm font-medium mb-8">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#4F46E5] animate-pulse" />
+          Real-time communication for high-performance teams
         </div>
-        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
-          Connect, Collaborate & <br />
-          <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Communicate Instantly
-          </span>
+        
+        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-[#131B2E] mb-6 leading-[1.15] max-w-4xl">
+          Real-time communication for <br className="hidden sm:inline" />
+          <span className="text-[#3525CD]">high-performance</span> teams.
         </h1>
-        <p className="text-lg md:text-xl text-slate-400 max-w-2xl mb-10 leading-relaxed">
-          Unify is an event-driven messaging platform engineered for high-performance communication with typing indicators, presence tracking, and file sharing.
+        
+        <p className="text-lg text-[#464555] max-w-2xl mb-10 leading-relaxed">
+          Centralize your engineering, design, and product discussions. One workspace for messages, assets, and decisions that keeps everyone in sync.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-16">
           <Link
             to="/register"
-            className="px-8 py-4 rounded-xl text-lg font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 text-center"
+            className="px-8 py-4 rounded-xl text-base font-bold bg-[#4F46E5] hover:bg-[#3525CD] text-white shadow-lg shadow-[#4F46E5]/25 transition-all hover:scale-105 active:scale-95 text-center"
           >
-            Launch Unify Chat
+            Get Started Free
           </Link>
           <Link
             to="/login"
-            className="px-8 py-4 rounded-xl text-lg font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all text-center"
+            className="px-8 py-4 rounded-xl text-base font-bold bg-white hover:bg-[#F2F3FF] text-[#131B2E] border border-[#E2E8F0] shadow-sm transition-all text-center"
           >
-            Sign In to Account
+            Log In to Workspace
           </Link>
+        </div>
+
+        {/* Floating 3-Column Preview Card */}
+        <div className="w-full max-w-5xl bg-white border border-[#E2E8F0] rounded-2xl shadow-2xl p-4 md:p-6 text-left overflow-hidden">
+          <div className="flex h-[380px] rounded-xl overflow-hidden border border-[#E2E8F0]">
+            {/* Column 1: Mini Nav */}
+            <div className="w-16 bg-[#FAF8FF] border-r border-[#E2E8F0] flex flex-col items-center py-4 gap-4">
+              <div className="w-8 h-8 bg-[#4F46E5] rounded-lg text-white font-bold text-sm flex items-center justify-center">N</div>
+              <div className="w-8 h-8 bg-[#EAEDFF] text-[#4F46E5] rounded-lg flex items-center justify-center font-bold text-xs">💬</div>
+            </div>
+
+            {/* Column 2: Mini Chat List */}
+            <div className="w-64 bg-[#F2F3FF] border-r border-[#E2E8F0] p-3 flex flex-col gap-2 hidden sm:flex">
+              <div className="font-bold text-xs text-[#131B2E] mb-1">Messages</div>
+              <div className="p-2.5 bg-white rounded-xl border border-[#E2E8F0] shadow-sm flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-[#3525CD] text-white font-bold text-xs flex items-center justify-center">SC</div>
+                <div>
+                  <div className="text-xs font-bold text-[#131B2E]">Sarah Chen</div>
+                  <div className="text-[11px] text-[#464555] truncate">The Q3 designs are ready!</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Column 3: Mini Chat Canvas */}
+            <div className="flex-1 bg-white p-4 flex flex-col justify-between">
+              <div className="border-b border-[#E2E8F0] pb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-[#3525CD] text-white text-xs flex items-center justify-center font-bold">SC</div>
+                  <span className="font-bold text-xs text-[#131B2E]">Sarah Chen</span>
+                  <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Online</span>
+                </div>
+              </div>
+              
+              <div className="space-y-3 py-4">
+                <div className="bg-[#F2F3FF] text-[#131B2E] p-3 rounded-2xl rounded-bl-none text-xs max-w-[80%]">
+                  Hey team, I've just uploaded the final wireframes for the new dashboard.
+                </div>
+                <div className="bg-[#4F46E5] text-white p-3 rounded-2xl rounded-br-none text-xs max-w-[80%] ml-auto">
+                  Looks great, Sarah! I'll take a look right now.
+                </div>
+              </div>
+
+              <div className="border-t border-[#E2E8F0] pt-2 flex items-center gap-2">
+                <input 
+                  type="text" 
+                  disabled 
+                  placeholder="Type a message..." 
+                  className="flex-1 bg-[#F2F3FF] border-none rounded-lg px-3 py-1.5 text-xs text-[#464555]"
+                />
+                <button className="bg-[#4F46E5] text-white px-3 py-1.5 rounded-lg text-xs font-bold">Send</button>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="py-8 text-center text-sm text-slate-500 border-t border-slate-800">
-        © 2026 Unify Inc. Built with MERN Stack & Socket.IO.
+      <footer className="py-6 text-center text-sm text-[#464555] bg-white border-t border-[#E2E8F0]">
+        © 2026 Unify Inc. Built with modern full-stack MERN & Socket.IO architecture.
       </footer>
     </div>
   );
