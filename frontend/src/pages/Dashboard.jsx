@@ -1,24 +1,48 @@
 import React, { useState } from 'react';
 import useAuth from '../hooks/useAuth';
+import useSocket from '../hooks/useSocket';
 import UserSearchModal from '../components/UserSearchModal';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
+  const { socketConnected, activeRoom, joinChat } = useSocket();
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
   const handleSelectUser = (targetUser) => {
     setSelectedUser(targetUser);
-    console.log('Selected user for conversation:', targetUser);
+    // Join conversation room placeholder
+    const conversationRoomId = `chat-${targetUser._id}`;
+    joinChat(conversationRoomId);
   };
 
   return (
     <div className="h-screen bg-slate-950 text-white flex overflow-hidden selection:bg-indigo-500 selection:text-white">
       {/* Sidebar Navigation */}
       <aside className="w-20 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-6 justify-between z-10">
-        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30">
-          U
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30">
+            U
+          </div>
+          {/* Socket Connection Status Indicator */}
+          <div
+            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
+              socketConnected
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            }`}
+            title={socketConnected ? 'WebSockets Connected' : 'Connecting to WebSockets...'}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                socketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+              }`}
+            />
+            <span>{socketConnected ? 'Live' : 'Connecting'}</span>
+          </div>
         </div>
+
         <div className="flex flex-col gap-6 text-slate-400">
           <button className="p-3 rounded-xl bg-slate-800 text-indigo-400" title="Chats">
             💬
@@ -38,6 +62,7 @@ const Dashboard = () => {
             🚪
           </button>
         </div>
+
         {/* User Profile Avatar */}
         <div
           className="w-10 h-10 rounded-full bg-indigo-600/40 border border-indigo-500/50 flex items-center justify-center text-sm font-semibold text-indigo-300 overflow-hidden cursor-pointer"
@@ -70,9 +95,14 @@ const Dashboard = () => {
         <div className="p-4 flex-1 text-center text-slate-500 text-sm flex flex-col items-center justify-center gap-3">
           {selectedUser ? (
             <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700 w-full text-left">
-              <p className="text-xs text-indigo-400 font-semibold mb-1">Selected Contact</p>
+              <p className="text-xs text-indigo-400 font-semibold mb-1">Active Room</p>
               <h4 className="text-sm font-bold text-white">{selectedUser.name}</h4>
               <p className="text-xs text-slate-400">{selectedUser.email}</p>
+              {activeRoom && (
+                <span className="inline-block mt-2 text-[10px] bg-slate-700/60 text-slate-300 px-2 py-0.5 rounded font-mono">
+                  Room: {activeRoom}
+                </span>
+              )}
             </div>
           ) : (
             <>
@@ -97,9 +127,11 @@ const Dashboard = () => {
             </div>
             <h3 className="text-xl font-bold text-white mb-1">{selectedUser.name}</h3>
             <p className="text-sm text-slate-400 mb-6">{selectedUser.email}</p>
-            <p className="text-xs text-indigo-400 bg-indigo-500/10 px-4 py-2 rounded-full border border-indigo-500/20 inline-block">
-              Ready for Chat System Integration (Phase 6 & 7)
-            </p>
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-xs text-emerald-400 bg-emerald-500/10 px-4 py-2 rounded-full border border-emerald-500/20 inline-block font-mono">
+                ⚡ Subscribed to WebSocket Room: {activeRoom}
+              </span>
+            </div>
           </div>
         ) : (
           <div className="text-center max-w-sm">
