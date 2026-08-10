@@ -44,6 +44,8 @@ app.get('/api/v1/health', (req, res) => {
 // API Routes
 app.use('/api/v1/auth', require('./routes/authRoutes'));
 app.use('/api/v1/users', require('./routes/userRoutes'));
+app.use('/api/v1/conversations', require('./routes/conversationRoutes'));
+app.use('/api/v1/messages', require('./routes/messageRoutes'));
 
 // Error Middleware Pipelines
 app.use(notFound);
