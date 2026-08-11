@@ -1,38 +1,126 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useAuth from '../hooks/useAuth';
 import useSocket from '../hooks/useSocket';
+import useChat from '../hooks/useChat';
 import UserSearchModal from '../components/UserSearchModal';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
-  const { socketConnected, activeRoom, joinChat } = useSocket();
+  const { socketConnected } = useSocket();
+  const {
+    conversations,
+    selectedChat,
+    messages,
+    loadingConversations,
+    loadingMessages,
+    selectConversation,
+    sendMessage,
+    setSelectedChat,
+  } = useChat();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [inputText, setInputText] = useState('');
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  const handleSelectUser = (targetUser) => {
-    setSelectedUser(targetUser);
-    // Join conversation room placeholder
-    const conversationRoomId = `chat-${targetUser._id}`;
-    joinChat(conversationRoomId);
+  // Auto-scroll message thread to bottom when messages update
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Helper to extract conversation partner for 1-to-1 chats
+  const getChatPartner = (chat) => {
+    if (!chat || !chat.participants) return null;
+    if (chat.isGroup) return null;
+    return chat.participants.find((p) => p._id !== user._id) || chat.participants[0];
+  };
+
+  // Helper to get conversation display name
+  const getChatName = (chat) => {
+    if (!chat) return '';
+    if (chat.isGroup) return chat.name || 'Group Chat';
+    const partner = getChatPartner(chat);
+    return partner ? partner.name : 'Unknown User';
+  };
+
+  // Helper to get conversation display avatar
+  const getChatAvatar = (chat) => {
+    if (!chat) return '';
+    if (chat.isGroup) return '';
+    const partner = getChatPartner(chat);
+    return partner ? partner.avatar : '';
+  };
+
+  // Select user from Search Modal
+  const handleSelectUserFromSearch = async (targetUser) => {
+    // Check if conversation already exists with this user
+    const existingChat = conversations.find(
+      (c) =>
+        !c.isGroup &&
+        c.participants &&
+        c.participants.some((p) => p._id === targetUser._id)
+    );
+
+    if (existingChat) {
+      selectConversation(existingChat);
+    } else {
+      // Temporary draft chat object for new 1-to-1 conversation
+      const tempChat = {
+        isGroup: false,
+        name: targetUser.name,
+        participants: [user, targetUser],
+        targetUser,
+      };
+      setSelectedChat(tempChat);
+    }
+  };
+
+  // Submit Message
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!inputText.trim() || sending) return;
+
+    const messageText = inputText.trim();
+    setInputText('');
+
+    try {
+      setSending(true);
+
+      if (selectedChat && selectedChat._id) {
+        await sendMessage({ content: messageText });
+      } else if (selectedChat && selectedChat.targetUser) {
+        await sendMessage({
+          recipientId: selectedChat.targetUser._id,
+          content: messageText,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
     <div className="h-screen bg-slate-950 text-white flex overflow-hidden selection:bg-indigo-500 selection:text-white">
-      {/* Sidebar Navigation */}
+      {/* 1. Leftmost Navigation Bar */}
       <aside className="w-20 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-6 justify-between z-10">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30">
             U
           </div>
-          {/* Socket Connection Status Indicator */}
+          {/* Socket Live Indicator */}
           <div
             className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
               socketConnected
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                 : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
             }`}
-            title={socketConnected ? 'WebSockets Connected' : 'Connecting to WebSockets...'}
+            title={socketConnected ? 'WebSockets Live' : 'Connecting to WebSockets...'}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full ${
@@ -80,10 +168,10 @@ const Dashboard = () => {
         </div>
       </aside>
 
-      {/* Conversations List Panel */}
+      {/* 2. Middle Conversations List Column */}
       <section className="w-80 bg-slate-900/50 border-r border-slate-800 flex flex-col">
         <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <h2 className="text-xl font-bold">Messages</h2>
+          <h2 className="text-xl font-bold tracking-tight">Messages</h2>
           <button
             onClick={() => setIsSearchOpen(true)}
             className="p-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-semibold transition-all"
@@ -92,20 +180,12 @@ const Dashboard = () => {
           </button>
         </div>
 
-        <div className="p-4 flex-1 text-center text-slate-500 text-sm flex flex-col items-center justify-center gap-3">
-          {selectedUser ? (
-            <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700 w-full text-left">
-              <p className="text-xs text-indigo-400 font-semibold mb-1">Active Room</p>
-              <h4 className="text-sm font-bold text-white">{selectedUser.name}</h4>
-              <p className="text-xs text-slate-400">{selectedUser.email}</p>
-              {activeRoom && (
-                <span className="inline-block mt-2 text-[10px] bg-slate-700/60 text-slate-300 px-2 py-0.5 rounded font-mono">
-                  Room: {activeRoom}
-                </span>
-              )}
-            </div>
-          ) : (
-            <>
+        {/* Conversations Feed */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+          {loadingConversations ? (
+            <div className="py-12 text-center text-slate-500 text-sm">Loading conversations...</div>
+          ) : conversations.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-sm flex flex-col items-center gap-3">
               <p>No active conversations yet</p>
               <button
                 onClick={() => setIsSearchOpen(true)}
@@ -113,26 +193,181 @@ const Dashboard = () => {
               >
                 Search & Start Chat
               </button>
-            </>
+            </div>
+          ) : (
+            conversations.map((chat) => {
+              const isSelected = selectedChat && selectedChat._id === chat._id;
+              const chatName = getChatName(chat);
+              const chatAvatar = getChatAvatar(chat);
+              const partner = getChatPartner(chat);
+
+              return (
+                <div
+                  key={chat._id}
+                  onClick={() => selectConversation(chat)}
+                  className={`p-3 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${
+                    isSelected
+                      ? 'bg-indigo-600/20 border border-indigo-500/40'
+                      : 'hover:bg-slate-800/60 border border-transparent'
+                  }`}
+                >
+                  <div className="relative w-11 h-11 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 overflow-hidden flex-shrink-0">
+                    {chatAvatar ? (
+                      <img
+                        src={`${import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090'}${chatAvatar}`}
+                        alt={chatName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      chatName.charAt(0).toUpperCase()
+                    )}
+                    {partner && (
+                      <span
+                        className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-900 ${
+                          partner.status === 'online' ? 'bg-emerald-500' : 'bg-slate-500'
+                        }`}
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline mb-0.5">
+                      <h4 className="text-sm font-semibold truncate text-white">{chatName}</h4>
+                      {chat.latestMessage && (
+                        <span className="text-[10px] text-slate-500">
+                          {new Date(chat.latestMessage.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 truncate">
+                      {chat.latestMessage ? chat.latestMessage.content : 'No messages yet'}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </section>
 
-      {/* Active Chat Area */}
-      <main className="flex-1 bg-slate-950 flex flex-col items-center justify-center text-slate-500 p-6">
-        {selectedUser ? (
-          <div className="text-center">
-            <div className="w-16 h-16 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-2xl font-bold text-indigo-300 mx-auto mb-4">
-              {selectedUser.name.charAt(0).toUpperCase()}
+      {/* 3. Main Active Chat Window */}
+      <main className="flex-1 bg-slate-950 flex flex-col">
+        {selectedChat ? (
+          <>
+            {/* Active Chat Header */}
+            <header className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/40 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="relative w-10 h-10 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold overflow-hidden">
+                  {getChatAvatar(selectedChat) ? (
+                    <img
+                      src={`${import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090'}${getChatAvatar(selectedChat)}`}
+                      alt={getChatName(selectedChat)}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    getChatName(selectedChat).charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white leading-tight">
+                    {getChatName(selectedChat)}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {selectedChat.isGroup
+                      ? `${selectedChat.participants?.length || 0} members`
+                      : getChatPartner(selectedChat)?.status === 'online'
+                      ? '🟢 Online'
+                      : 'Offline'}
+                  </p>
+                </div>
+              </div>
+            </header>
+
+            {/* Scrollable Message Thread Area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {loadingMessages ? (
+                <div className="py-12 text-center text-slate-500 text-sm">Loading message history...</div>
+              ) : messages.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-sm">
+                  No messages in this chat yet. Send a message to start communicating!
+                </div>
+              ) : (
+                messages.map((msg) => {
+                  const isSentByMe =
+                    (msg.sender?._id || msg.sender) === user._id ||
+                    (typeof msg.sender === 'object' && msg.sender._id === user._id);
+
+                  return (
+                    <div
+                      key={msg._id}
+                      className={`flex flex-col ${isSentByMe ? 'items-end' : 'items-start'}`}
+                    >
+                      <div className="flex items-end gap-2 max-w-[70%]">
+                        {!isSentByMe && (
+                          <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 overflow-hidden flex-shrink-0 mb-1">
+                            {msg.sender?.avatar ? (
+                              <img
+                                src={`${import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090'}${msg.sender.avatar}`}
+                                alt="sender"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              msg.sender?.name?.charAt(0).toUpperCase() || 'U'
+                            )}
+                          </div>
+                        )}
+
+                        {/* Chat Bubble */}
+                        <div
+                          className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                            isSentByMe
+                              ? 'bg-indigo-600 text-white rounded-br-xs shadow-md shadow-indigo-600/20'
+                              : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-xs'
+                          }`}
+                        >
+                          <p>{msg.content}</p>
+                          <div
+                            className={`text-[10px] mt-1 text-right ${
+                              isSentByMe ? 'text-indigo-200/80' : 'text-slate-500'
+                            }`}
+                          >
+                            {new Date(msg.createdAt).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-1">{selectedUser.name}</h3>
-            <p className="text-sm text-slate-400 mb-6">{selectedUser.email}</p>
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-xs text-emerald-400 bg-emerald-500/10 px-4 py-2 rounded-full border border-emerald-500/20 inline-block font-mono">
-                ⚡ Subscribed to WebSocket Room: {activeRoom}
-              </span>
-            </div>
-          </div>
+
+            {/* Chat Input Footer */}
+            <footer className="p-4 border-t border-slate-800 bg-slate-900/40 backdrop-blur-md">
+              <form onSubmit={handleSend} className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Type a message..."
+                  className="flex-1 px-4 py-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={!inputText.trim() || sending}
+                  className="w-12 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center font-bold shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                >
+                  ➤
+                </button>
+              </form>
+            </footer>
+          </>
         ) : (
           <div className="text-center max-w-sm">
             <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl mx-auto mb-4">
@@ -150,7 +385,7 @@ const Dashboard = () => {
       <UserSearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        onSelectUser={handleSelectUser}
+        onSelectUser={handleSelectUserFromSearch}
       />
     </div>
   );

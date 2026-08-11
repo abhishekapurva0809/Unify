@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { ChatProvider } from './context/ChatContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import Landing from './pages/Landing';
@@ -13,26 +14,28 @@ function App() {
   return (
     <AuthProvider>
       <SocketProvider>
-        <Router>
-          <Routes>
-            {/* Public Landing Page */}
-            <Route path="/" element={<Landing />} />
+        <ChatProvider>
+          <Router>
+            <Routes>
+              {/* Public Landing Page */}
+              <Route path="/" element={<Landing />} />
 
-            {/* Authentication Routes (Redirects to /dashboard if logged in) */}
-            <Route element={<PublicRoute />}>
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-            </Route>
+              {/* Authentication Routes (Redirects to /dashboard if logged in) */}
+              <Route element={<PublicRoute />}>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+              </Route>
 
-            {/* Protected Application Routes (Redirects to /login if unauthenticated) */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-            </Route>
+              {/* Protected Application Routes (Redirects to /login if unauthenticated) */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+              </Route>
 
-            {/* Catch-all fallback */}
-            <Route path="*" element={<Landing />} />
-          </Routes>
-        </Router>
+              {/* Catch-all fallback */}
+              <Route path="*" element={<Landing />} />
+            </Routes>
+          </Router>
+        </ChatProvider>
       </SocketProvider>
     </AuthProvider>
   );
