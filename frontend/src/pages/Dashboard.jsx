@@ -366,14 +366,33 @@ const Dashboard = () => {
                         >
                           <p>{msg.content}</p>
                           <div
-                            className={`text-[10px] mt-1 text-right ${
+                            className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${
                               isSentByMe ? 'text-indigo-200/80' : 'text-slate-500'
                             }`}
                           >
-                            {new Date(msg.createdAt).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            <span>
+                              {new Date(msg.createdAt).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                            {isSentByMe && (
+                              <span className="font-bold text-xs">
+                                {msg.status === 'read' ? (
+                                  <span className="text-cyan-300" title="Read">
+                                    ✓✓
+                                  </span>
+                                ) : msg.status === 'delivered' ? (
+                                  <span className="text-slate-300/80" title="Delivered">
+                                    ✓✓
+                                  </span>
+                                ) : (
+                                  <span className="text-indigo-200/70" title="Sent">
+                                    ✓
+                                  </span>
+                                )}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -23,14 +23,12 @@ const sendMessage = async (req, res) => {
 
     // 1. If conversationId is not provided but recipientId is, find or create 1-to-1 conversation
     if (!targetConversationId && recipientId) {
-      // Check if 1-to-1 conversation already exists between sender and recipient
       let existingChat = await Conversation.findOne({
         isGroup: false,
         participants: { $all: [req.user._id, recipientId] },
       });
 
       if (!existingChat) {
-        // Create new 1-to-1 conversation
         existingChat = await Conversation.create({
           isGroup: false,
           participants: [req.user._id, recipientId],
@@ -80,7 +78,6 @@ const sendMessage = async (req, res) => {
 
       if (conversation && conversation.participants) {
         conversation.participants.forEach((participant) => {
-          // Exclude the sender from receiving their own message event twice
           if (participant._id.toString() !== req.user._id.toString()) {
             io.to(participant._id.toString()).emit('message_received', populatedMessage);
           }
@@ -111,7 +108,6 @@ const fetchMessages = async (req, res) => {
   try {
     const { conversationId } = req.params;
 
-    // Verify conversation existence and participant membership
     const conversation = await Conversation.findById(conversationId);
     if (!conversation) {
       return res.status(404).json({
@@ -131,7 +127,6 @@ const fetchMessages = async (req, res) => {
       });
     }
 
-    // Fetch messages sorted chronologically
     const messages = await Message.find({ conversationId })
       .populate('sender', 'name email avatar status')
       .sort({ createdAt: 1 });
@@ -149,7 +144,53 @@ const fetchMessages = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Mark all messages in a conversation as read by logged in user
+ * @route   PUT /api/v1/messages/read/:conversationId
+ * @access  Private (Protected by authMiddleware)
+ */
+const markMessagesAsRead = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+
+    // Update messages in this conversation sent by other users
+    await Message.updateMany(
+      {
+        conversationId,
+        sender: { $ne: req.user._id },
+        'readBy.user': { $ne: req.user._id },
+      },
+      {
+        $set: { status: 'read' },
+        $push: { readBy: { user: req.user._id, readAt: new Date() } },
+      }
+    );
+
+    // Emit real-time read receipt event to room subscribers
+    try {
+      const io = getIO();
+      io.to(conversationId).emit('messages_read', {
+        conversationId,
+        readByUserId: req.user._id,
+      });
+    } catch (socketErr) {
+      console.warn('Socket emit warning on read receipts:', socketErr.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Messages marked as read',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error marking messages as read',
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   fetchMessages,
+  markMessagesAsRead,
 };

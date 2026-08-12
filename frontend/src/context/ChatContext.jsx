@@ -5,6 +5,7 @@ import {
   fetchConversationsApi,
   fetchMessagesApi,
   sendMessageApi,
+  markMessagesAsReadApi,
 } from '../services/messageService';
 
 export const ChatContext = createContext();
@@ -40,6 +41,16 @@ export const ChatProvider = ({ children }) => {
     loadConversations();
   }, [loadConversations]);
 
+  // Mark Messages as Read helper
+  const markAsRead = useCallback(async (chatId) => {
+    if (!chatId) return;
+    try {
+      await markMessagesAsReadApi(chatId);
+    } catch (err) {
+      console.error('Error marking messages as read:', err.message);
+    }
+  }, []);
+
   // 2. Select a Conversation & Load Message History
   const selectConversation = useCallback(
     async (chat) => {
@@ -49,6 +60,9 @@ export const ChatProvider = ({ children }) => {
 
       // Join socket room
       joinChat(chatId);
+
+      // Mark messages as read on server
+      markAsRead(chatId);
 
       try {
         setLoadingMessages(true);
@@ -63,7 +77,7 @@ export const ChatProvider = ({ children }) => {
         setLoadingMessages(false);
       }
     },
-    [joinChat]
+    [joinChat, markAsRead]
   );
 
   // 3. Send Message Action
@@ -142,6 +156,9 @@ export const ChatProvider = ({ children }) => {
           }
           return [...prevMessages, newMessage];
         });
+
+        // Automatically mark incoming active chat message as read
+        markAsRead(targetConversationId);
       }
 
       loadConversations();
@@ -160,16 +177,30 @@ export const ChatProvider = ({ children }) => {
       }
     };
 
+    // Real-Time Read Receipts Event Listener
+    const handleMessagesRead = ({ conversationId }) => {
+      if (selectedChat && selectedChat._id === conversationId) {
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) => ({
+            ...msg,
+            status: 'read',
+          }))
+        );
+      }
+    };
+
     socket.on('message_received', handleMessageReceived);
     socket.on('typing', handleTyping);
     socket.on('stop_typing', handleStopTyping);
+    socket.on('messages_read', handleMessagesRead);
 
     return () => {
       socket.off('message_received', handleMessageReceived);
       socket.off('typing', handleTyping);
       socket.off('stop_typing', handleStopTyping);
+      socket.off('messages_read', handleMessagesRead);
     };
-  }, [socket, socketConnected, selectedChat, loadConversations]);
+  }, [socket, socketConnected, selectedChat, loadConversations, markAsRead]);
 
   return (
     <ChatContext.Provider
@@ -184,6 +215,7 @@ export const ChatProvider = ({ children }) => {
         sendMessage,
         sendTyping,
         sendStopTyping,
+        markAsRead,
         loadConversations,
         setSelectedChat,
       }}

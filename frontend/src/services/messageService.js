@@ -21,3 +21,9 @@ export const fetchConversationsApi = async () => {
   const response = await API.get('/conversations');
   return response.data;
 };
+
+// Mark all unread messages in a conversation as read
+export const markMessagesAsReadApi = async (conversationId) => {
+  const response = await API.put(`/messages/read/${conversationId}`);
+  return response.data;
+};
