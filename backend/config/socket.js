@@ -45,6 +45,26 @@ const initSocket = (server) => {
     });
 
     /**
+     * Event: typing
+     * Broadcasts typing status to room members except sender
+     */
+    socket.on('typing', (room) => {
+      if (room) {
+        socket.in(room).emit('typing', room);
+      }
+    });
+
+    /**
+     * Event: stop_typing
+     * Broadcasts stop typing status to room members except sender
+     */
+    socket.on('stop_typing', (room) => {
+      if (room) {
+        socket.in(room).emit('stop_typing', room);
+      }
+    });
+
+    /**
      * Event: disconnect
      * Fires when client socket drops or closes connection
      */

@@ -18,7 +18,7 @@ export const ChatProvider = ({ children }) => {
   const [messages, setMessages] = useState([]);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [typingUsers, setTypingUsers] = useState({});
+  const [isTyping, setIsTyping] = useState(false);
 
   // 1. Fetch Conversations Feed on Load
   const loadConversations = useCallback(async () => {
@@ -44,6 +44,7 @@ export const ChatProvider = ({ children }) => {
   const selectConversation = useCallback(
     async (chat) => {
       setSelectedChat(chat);
+      setIsTyping(false);
       const chatId = chat._id;
 
       // Join socket room
@@ -83,6 +84,11 @@ export const ChatProvider = ({ children }) => {
         // Append to active message thread
         setMessages((prev) => [...prev, newMsg]);
 
+        // Stop typing indicator on message send
+        if (selectedChat && socket && socketConnected) {
+          socket.emit('stop_typing', selectedChat._id);
+        }
+
         // Refresh conversation feed
         await loadConversations();
 
@@ -103,7 +109,20 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
-  // 4. Real-Time Socket Event Listeners
+  // 4. Emit Typing Events
+  const sendTyping = useCallback(() => {
+    if (socket && socketConnected && selectedChat && selectedChat._id) {
+      socket.emit('typing', selectedChat._id);
+    }
+  }, [socket, socketConnected, selectedChat]);
+
+  const sendStopTyping = useCallback(() => {
+    if (socket && socketConnected && selectedChat && selectedChat._id) {
+      socket.emit('stop_typing', selectedChat._id);
+    }
+  }, [socket, socketConnected, selectedChat]);
+
+  // 5. Real-Time Socket Event Listeners
   useEffect(() => {
     if (!socket || !socketConnected) return;
 
@@ -116,10 +135,8 @@ export const ChatProvider = ({ children }) => {
           ? newMessage.conversationId._id
           : newMessage.conversationId;
 
-      // If incoming message belongs to currently active chat window, append to thread
       if (selectedChat && selectedChat._id === targetConversationId) {
         setMessages((prevMessages) => {
-          // Avoid duplicate messages
           if (prevMessages.some((m) => m._id === newMessage._id)) {
             return prevMessages;
           }
@@ -127,14 +144,30 @@ export const ChatProvider = ({ children }) => {
         });
       }
 
-      // Update conversations feed order
       loadConversations();
     };
 
+    // Incoming Typing Events
+    const handleTyping = (room) => {
+      if (selectedChat && selectedChat._id === room) {
+        setIsTyping(true);
+      }
+    };
+
+    const handleStopTyping = (room) => {
+      if (selectedChat && selectedChat._id === room) {
+        setIsTyping(false);
+      }
+    };
+
     socket.on('message_received', handleMessageReceived);
+    socket.on('typing', handleTyping);
+    socket.on('stop_typing', handleStopTyping);
 
     return () => {
       socket.off('message_received', handleMessageReceived);
+      socket.off('typing', handleTyping);
+      socket.off('stop_typing', handleStopTyping);
     };
   }, [socket, socketConnected, selectedChat, loadConversations]);
 
@@ -146,9 +179,11 @@ export const ChatProvider = ({ children }) => {
         messages,
         loadingConversations,
         loadingMessages,
-        typingUsers,
+        isTyping,
         selectConversation,
         sendMessage,
+        sendTyping,
+        sendStopTyping,
         loadConversations,
         setSelectedChat,
       }}

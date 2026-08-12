@@ -13,24 +13,28 @@ const Dashboard = () => {
     messages,
     loadingConversations,
     loadingMessages,
+    isTyping,
     selectConversation,
     sendMessage,
+    sendTyping,
+    sendStopTyping,
     setSelectedChat,
   } = useChat();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
+  const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll message thread to bottom when messages update
+  // Auto-scroll message thread to bottom when messages update or typing occurs
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isTyping]);
 
   // Helper to extract conversation partner for 1-to-1 chats
   const getChatPartner = (chat) => {
@@ -55,9 +59,26 @@ const Dashboard = () => {
     return partner ? partner.avatar : '';
   };
 
+  // Input Change Handler with Typing Debounce
+  const handleInputChange = (e) => {
+    setInputText(e.target.value);
+
+    // Emit typing event
+    sendTyping();
+
+    // Clear previous stop_typing timer
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set 2-second inactivity timer to emit stop_typing
+    typingTimeoutRef.current = setTimeout(() => {
+      sendStopTyping();
+    }, 2000);
+  };
+
   // Select user from Search Modal
   const handleSelectUserFromSearch = async (targetUser) => {
-    // Check if conversation already exists with this user
     const existingChat = conversations.find(
       (c) =>
         !c.isGroup &&
@@ -68,7 +89,6 @@ const Dashboard = () => {
     if (existingChat) {
       selectConversation(existingChat);
     } else {
-      // Temporary draft chat object for new 1-to-1 conversation
       const tempChat = {
         isGroup: false,
         name: targetUser.name,
@@ -83,6 +103,11 @@ const Dashboard = () => {
   const handleSend = async (e) => {
     e.preventDefault();
     if (!inputText.trim() || sending) return;
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    sendStopTyping();
 
     const messageText = inputText.trim();
     setInputText('');
@@ -275,12 +300,23 @@ const Dashboard = () => {
                   <h3 className="text-sm font-bold text-white leading-tight">
                     {getChatName(selectedChat)}
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    {selectedChat.isGroup
-                      ? `${selectedChat.participants?.length || 0} members`
-                      : getChatPartner(selectedChat)?.status === 'online'
-                      ? '🟢 Online'
-                      : 'Offline'}
+                  <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                    {isTyping ? (
+                      <span className="text-indigo-400 font-semibold flex items-center gap-1">
+                        <span>typing</span>
+                        <span className="flex gap-0.5">
+                          <span className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </span>
+                      </span>
+                    ) : selectedChat.isGroup ? (
+                      `${selectedChat.participants?.length || 0} members`
+                    ) : getChatPartner(selectedChat)?.status === 'online' ? (
+                      '🟢 Online'
+                    ) : (
+                      'Offline'
+                    )}
                   </p>
                 </div>
               </div>
@@ -345,6 +381,29 @@ const Dashboard = () => {
                   );
                 })
               )}
+
+              {/* Animated Typing Dots Indicator Bubble */}
+              {isTyping && (
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 overflow-hidden">
+                    {getChatAvatar(selectedChat) ? (
+                      <img
+                        src={`${import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090'}${getChatAvatar(selectedChat)}`}
+                        alt="partner"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      getChatName(selectedChat).charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-indigo-400 flex items-center gap-1.5 rounded-bl-xs">
+                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -354,7 +413,7 @@ const Dashboard = () => {
                 <input
                   type="text"
                   value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
+                  onChange={handleInputChange}
                   placeholder="Type a message..."
                   className="flex-1 px-4 py-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all"
                 />
