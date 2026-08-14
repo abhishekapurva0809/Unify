@@ -4,6 +4,8 @@ import useSocket from '../hooks/useSocket';
 import useChat from '../hooks/useChat';
 import UserSearchModal from '../components/UserSearchModal';
 
+import CreateGroupModal from '../components/CreateGroupModal';
+
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const { socketConnected } = useSocket();
@@ -22,6 +24,7 @@ const Dashboard = () => {
   } = useChat();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const typingTimeoutRef = useRef(null);
@@ -197,12 +200,20 @@ const Dashboard = () => {
       <section className="w-80 bg-slate-900/50 border-r border-slate-800 flex flex-col">
         <div className="p-5 border-b border-slate-800 flex items-center justify-between">
           <h2 className="text-xl font-bold tracking-tight">Messages</h2>
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="p-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-semibold transition-all"
-          >
-            + New Chat
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setIsGroupModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white text-xs font-semibold transition-all"
+            >
+              + Group
+            </button>
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-semibold transition-all"
+            >
+              + Chat
+            </button>
+          </div>
         </div>
 
         {/* Conversations Feed */}
@@ -464,6 +475,15 @@ const Dashboard = () => {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onSelectUser={handleSelectUserFromSearch}
+      />
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={isGroupModalOpen}
+        onClose={() => setIsGroupModalOpen(false)}
+        onGroupCreated={(newGroup) => {
+          selectConversation(newGroup);
+        }}
       />
     </div>
   );

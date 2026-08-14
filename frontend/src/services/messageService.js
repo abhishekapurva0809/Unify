@@ -27,3 +27,9 @@ export const markMessagesAsReadApi = async (conversationId) => {
   const response = await API.put(`/messages/read/${conversationId}`);
   return response.data;
 };
+
+// Create a new group chat conversation
+export const createGroupChatApi = async (groupData) => {
+  const response = await API.post('/conversations/group', groupData);
+  return response.data;
+};
