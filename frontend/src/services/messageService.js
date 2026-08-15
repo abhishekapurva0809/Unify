@@ -33,3 +33,21 @@ export const createGroupChatApi = async (groupData) => {
   const response = await API.post('/conversations/group', groupData);
   return response.data;
 };
+
+// Rename an existing group chat
+export const renameGroupApi = async (data) => {
+  const response = await API.put('/conversations/group/rename', data);
+  return response.data;
+};
+
+// Add a user to a group chat
+export const addToGroupApi = async (data) => {
+  const response = await API.put('/conversations/group/add', data);
+  return response.data;
+};
+
+// Remove a user from a group chat or leave group
+export const removeFromGroupApi = async (data) => {
+  const response = await API.put('/conversations/group/remove', data);
+  return response.data;
+};

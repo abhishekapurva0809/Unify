@@ -52,7 +52,6 @@ const createGroupChat = async (req, res) => {
       });
     }
 
-    // Handle JSON stringified arrays or raw arrays
     if (typeof users === 'string') {
       users = JSON.parse(users);
     }
@@ -64,22 +63,19 @@ const createGroupChat = async (req, res) => {
       });
     }
 
-    // Include the creator in the participants list
     users.push(req.user._id);
 
-    // Create group conversation document
     const groupChat = await Conversation.create({
       name: name.trim(),
       isGroup: true,
       participants: users,
-      admins: [req.user._id], // Creator becomes initial admin
+      admins: [req.user._id],
     });
 
     const fullGroupChat = await Conversation.findById(groupChat._id)
       .populate('participants', 'name email avatar status')
       .populate('admins', 'name email avatar');
 
-    // Real-time Socket.IO notification to all group members
     try {
       const io = getIO();
       fullGroupChat.participants.forEach((participant) => {
@@ -101,7 +97,172 @@ const createGroupChat = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Rename a group chat title
+ * @route   PUT /api/v1/conversations/group/rename
+ * @access  Private (Protected by authMiddleware)
+ */
+const renameGroup = async (req, res) => {
+  try {
+    const { conversationId, name } = req.body;
+
+    if (!conversationId || !name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide conversationId and new group name',
+      });
+    }
+
+    const updatedGroup = await Conversation.findByIdAndUpdate(
+      conversationId,
+      { name: name.trim() },
+      { new: true }
+    )
+      .populate('participants', 'name email avatar status')
+      .populate('admins', 'name email avatar');
+
+    if (!updatedGroup) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group conversation not found',
+      });
+    }
+
+    // Broadcast updated group details over WebSockets
+    try {
+      const io = getIO();
+      io.to(conversationId).emit('group_updated', updatedGroup);
+    } catch (socketErr) {
+      console.warn('Socket emit warning on group rename:', socketErr.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedGroup,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error renaming group',
+    });
+  }
+};
+
+/**
+ * @desc    Add a new member to an existing group chat
+ * @route   PUT /api/v1/conversations/group/add
+ * @access  Private (Protected by authMiddleware - Admin only)
+ */
+const addToGroup = async (req, res) => {
+  try {
+    const { conversationId, userId } = req.body;
+
+    const group = await Conversation.findById(conversationId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group conversation not found',
+      });
+    }
+
+    // Verify requesting user is a group admin
+    const isAdmin = group.admins.some((a) => a.toString() === req.user._id.toString());
+    if (!isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only group admins can add new members',
+      });
+    }
+
+    // Add user to participants if not already present
+    const updatedGroup = await Conversation.findByIdAndUpdate(
+      conversationId,
+      { $addToSet: { participants: userId } },
+      { new: true }
+    )
+      .populate('participants', 'name email avatar status')
+      .populate('admins', 'name email avatar');
+
+    try {
+      const io = getIO();
+      io.to(conversationId).emit('group_updated', updatedGroup);
+      io.to(userId).emit('group_created', updatedGroup);
+    } catch (socketErr) {
+      console.warn('Socket emit warning on add member:', socketErr.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedGroup,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error adding to group',
+    });
+  }
+};
+
+/**
+ * @desc    Remove a member from a group chat or leave group
+ * @route   PUT /api/v1/conversations/group/remove
+ * @access  Private (Protected by authMiddleware - Admin or self leave)
+ */
+const removeFromGroup = async (req, res) => {
+  try {
+    const { conversationId, userId } = req.body;
+
+    const group = await Conversation.findById(conversationId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group conversation not found',
+      });
+    }
+
+    const isAdmin = group.admins.some((a) => a.toString() === req.user._id.toString());
+    const isSelfRemove = userId === req.user._id.toString();
+
+    if (!isAdmin && !isSelfRemove) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only group admins can remove members from the group',
+      });
+    }
+
+    const updatedGroup = await Conversation.findByIdAndUpdate(
+      conversationId,
+      {
+        $pull: { participants: userId, admins: userId },
+      },
+      { new: true }
+    )
+      .populate('participants', 'name email avatar status')
+      .populate('admins', 'name email avatar');
+
+    try {
+      const io = getIO();
+      io.to(conversationId).emit('group_updated', updatedGroup);
+    } catch (socketErr) {
+      console.warn('Socket emit warning on remove member:', socketErr.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedGroup,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error removing from group',
+    });
+  }
+};
+
 module.exports = {
   fetchConversations,
   createGroupChat,
+  renameGroup,
+  addToGroup,
+  removeFromGroup,
 };

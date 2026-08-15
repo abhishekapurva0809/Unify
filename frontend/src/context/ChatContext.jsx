@@ -189,16 +189,32 @@ export const ChatProvider = ({ children }) => {
       }
     };
 
+    // Real-Time Group Updates Event Listener
+    const handleGroupUpdated = (updatedGroup) => {
+      if (selectedChat && selectedChat._id === updatedGroup._id) {
+        setSelectedChat(updatedGroup);
+      }
+      loadConversations();
+    };
+
+    const handleGroupCreated = (newGroup) => {
+      loadConversations();
+    };
+
     socket.on('message_received', handleMessageReceived);
     socket.on('typing', handleTyping);
     socket.on('stop_typing', handleStopTyping);
     socket.on('messages_read', handleMessagesRead);
+    socket.on('group_updated', handleGroupUpdated);
+    socket.on('group_created', handleGroupCreated);
 
     return () => {
       socket.off('message_received', handleMessageReceived);
       socket.off('typing', handleTyping);
       socket.off('stop_typing', handleStopTyping);
       socket.off('messages_read', handleMessagesRead);
+      socket.off('group_updated', handleGroupUpdated);
+      socket.off('group_created', handleGroupCreated);
     };
   }, [socket, socketConnected, selectedChat, loadConversations, markAsRead]);
 

@@ -5,6 +5,7 @@ import useChat from '../hooks/useChat';
 import UserSearchModal from '../components/UserSearchModal';
 
 import CreateGroupModal from '../components/CreateGroupModal';
+import GroupSettingsModal from '../components/GroupSettingsModal';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -20,11 +21,13 @@ const Dashboard = () => {
     sendMessage,
     sendTyping,
     sendStopTyping,
+    loadConversations,
     setSelectedChat,
   } = useChat();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const typingTimeoutRef = useRef(null);
@@ -331,6 +334,18 @@ const Dashboard = () => {
                   </p>
                 </div>
               </div>
+
+              {/* Group Settings Button */}
+              {selectedChat.isGroup && (
+                <button
+                  onClick={() => setIsGroupSettingsOpen(true)}
+                  className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5"
+                  title="Group Settings"
+                >
+                  <span>⚙️</span>
+                  <span>Settings</span>
+                </button>
+              )}
             </header>
 
             {/* Scrollable Message Thread Area */}
@@ -483,6 +498,17 @@ const Dashboard = () => {
         onClose={() => setIsGroupModalOpen(false)}
         onGroupCreated={(newGroup) => {
           selectConversation(newGroup);
+        }}
+      />
+
+      {/* Group Settings Modal */}
+      <GroupSettingsModal
+        isOpen={isGroupSettingsOpen}
+        onClose={() => setIsGroupSettingsOpen(false)}
+        chat={selectedChat}
+        onGroupUpdated={(updatedGroup) => {
+          setSelectedChat(updatedGroup);
+          loadConversations();
         }}
       />
     </div>
