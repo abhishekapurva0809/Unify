@@ -51,3 +51,13 @@ export const removeFromGroupApi = async (data) => {
   const response = await API.put('/conversations/group/remove', data);
   return response.data;
 };
+
+// Upload media attachment for a chat message
+export const uploadMediaAttachmentApi = async (formData) => {
+  const response = await API.post('/messages/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};

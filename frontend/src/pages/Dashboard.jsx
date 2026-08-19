@@ -3,9 +3,9 @@ import useAuth from '../hooks/useAuth';
 import useSocket from '../hooks/useSocket';
 import useChat from '../hooks/useChat';
 import UserSearchModal from '../components/UserSearchModal';
-
 import CreateGroupModal from '../components/CreateGroupModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
+import { uploadMediaAttachmentApi } from '../services/messageService';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -30,8 +30,14 @@ const Dashboard = () => {
   const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
+  const [attachmentDraft, setAttachmentDraft] = useState(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
   const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const SOCKET_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090';
 
   // Auto-scroll message thread to bottom when messages update or typing occurs
   const scrollToBottom = () => {
@@ -40,7 +46,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping]);
+  }, [messages, isTyping, attachmentDraft]);
 
   // Helper to extract conversation partner for 1-to-1 chats
   const getChatPartner = (chat) => {
@@ -68,19 +74,37 @@ const Dashboard = () => {
   // Input Change Handler with Typing Debounce
   const handleInputChange = (e) => {
     setInputText(e.target.value);
-
-    // Emit typing event
     sendTyping();
 
-    // Clear previous stop_typing timer
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set 2-second inactivity timer to emit stop_typing
     typingTimeoutRef.current = setTimeout(() => {
       sendStopTyping();
     }, 2000);
+  };
+
+  // File Select Attachment Handler
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploadingMedia(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await uploadMediaAttachmentApi(formData);
+      if (response.success) {
+        setAttachmentDraft(response.data);
+      }
+    } catch (err) {
+      console.error('Failed to upload attachment:', err);
+    } finally {
+      setUploadingMedia(false);
+      e.target.value = null; // reset file input
+    }
   };
 
   // Select user from Search Modal
@@ -108,7 +132,7 @@ const Dashboard = () => {
   // Submit Message
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!inputText.trim() || sending) return;
+    if ((!inputText.trim() && !attachmentDraft) || sending) return;
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -116,17 +140,23 @@ const Dashboard = () => {
     sendStopTyping();
 
     const messageText = inputText.trim();
+    const mediaUrl = attachmentDraft ? attachmentDraft.mediaUrl : '';
+    const mediaType = attachmentDraft ? attachmentDraft.mediaType : '';
+
     setInputText('');
+    setAttachmentDraft(null);
 
     try {
       setSending(true);
 
       if (selectedChat && selectedChat._id) {
-        await sendMessage({ content: messageText });
+        await sendMessage({ content: messageText, mediaUrl, mediaType });
       } else if (selectedChat && selectedChat.targetUser) {
         await sendMessage({
           recipientId: selectedChat.targetUser._id,
           content: messageText,
+          mediaUrl,
+          mediaType,
         });
       }
     } catch (error) {
@@ -189,7 +219,7 @@ const Dashboard = () => {
         >
           {user?.avatar ? (
             <img
-              src={`${import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090'}${user.avatar}`}
+              src={`${SOCKET_URL}${user.avatar}`}
               alt={user.name}
               className="w-full h-full object-cover"
             />
@@ -253,7 +283,7 @@ const Dashboard = () => {
                   <div className="relative w-11 h-11 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 overflow-hidden flex-shrink-0">
                     {chatAvatar ? (
                       <img
-                        src={`${import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090'}${chatAvatar}`}
+                        src={`${SOCKET_URL}${chatAvatar}`}
                         alt={chatName}
                         className="w-full h-full object-cover"
                       />
@@ -282,7 +312,13 @@ const Dashboard = () => {
                       )}
                     </div>
                     <p className="text-xs text-slate-400 truncate">
-                      {chat.latestMessage ? chat.latestMessage.content : 'No messages yet'}
+                      {chat.latestMessage
+                        ? chat.latestMessage.mediaUrl
+                          ? chat.latestMessage.mediaType === 'image'
+                            ? '📷 Image attachment'
+                            : '📄 File attachment'
+                          : chat.latestMessage.content
+                        : 'No messages yet'}
                     </p>
                   </div>
                 </div>
@@ -302,7 +338,7 @@ const Dashboard = () => {
                 <div className="relative w-10 h-10 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold overflow-hidden">
                   {getChatAvatar(selectedChat) ? (
                     <img
-                      src={`${import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090'}${getChatAvatar(selectedChat)}`}
+                      src={`${SOCKET_URL}${getChatAvatar(selectedChat)}`}
                       alt={getChatName(selectedChat)}
                       className="w-full h-full object-cover"
                     />
@@ -372,7 +408,7 @@ const Dashboard = () => {
                           <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 overflow-hidden flex-shrink-0 mb-1">
                             {msg.sender?.avatar ? (
                               <img
-                                src={`${import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090'}${msg.sender.avatar}`}
+                                src={`${SOCKET_URL}${msg.sender.avatar}`}
                                 alt="sender"
                                 className="w-full h-full object-cover"
                               />
@@ -390,7 +426,37 @@ const Dashboard = () => {
                               : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-xs'
                           }`}
                         >
-                          <p>{msg.content}</p>
+                          {/* Image Attachment Rendering */}
+                          {msg.mediaUrl && msg.mediaType === 'image' && (
+                            <div className="mb-2 rounded-xl overflow-hidden border border-slate-700/50">
+                              <img
+                                src={`${SOCKET_URL}${msg.mediaUrl}`}
+                                alt="Attachment"
+                                className="max-w-xs max-h-60 object-cover cursor-pointer hover:scale-105 transition-transform"
+                                onClick={() => window.open(`${SOCKET_URL}${msg.mediaUrl}`, '_blank')}
+                              />
+                            </div>
+                          )}
+
+                          {/* File Attachment Rendering */}
+                          {msg.mediaUrl && msg.mediaType === 'file' && (
+                            <div className="mb-2 p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center gap-2">
+                              <span>📄</span>
+                              <a
+                                href={`${SOCKET_URL}${msg.mediaUrl}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                download
+                                className="text-xs text-indigo-300 underline font-semibold hover:text-white truncate max-w-xs"
+                              >
+                                View / Download Attachment
+                              </a>
+                            </div>
+                          )}
+
+                          {/* Message Content Text */}
+                          {msg.content && <p>{msg.content}</p>}
+
                           <div
                             className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${
                               isSentByMe ? 'text-indigo-200/80' : 'text-slate-500'
@@ -433,7 +499,7 @@ const Dashboard = () => {
                   <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 overflow-hidden">
                     {getChatAvatar(selectedChat) ? (
                       <img
-                        src={`${import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090'}${getChatAvatar(selectedChat)}`}
+                        src={`${SOCKET_URL}${getChatAvatar(selectedChat)}`}
                         alt="partner"
                         className="w-full h-full object-cover"
                       />
@@ -454,7 +520,43 @@ const Dashboard = () => {
 
             {/* Chat Input Footer */}
             <footer className="p-4 border-t border-slate-800 bg-slate-900/40 backdrop-blur-md">
+              {/* Attachment Preview Banner */}
+              {attachmentDraft && (
+                <div className="mb-3 p-2.5 rounded-2xl bg-slate-900 border border-indigo-500/40 flex items-center justify-between text-xs text-indigo-300">
+                  <div className="flex items-center gap-2 truncate">
+                    <span>{attachmentDraft.mediaType === 'image' ? '📷' : '📄'}</span>
+                    <span className="font-semibold truncate">
+                      {attachmentDraft.originalName || 'Attachment Ready'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAttachmentDraft(null)}
+                    className="w-6 h-6 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
               <form onSubmit={handleSend} className="flex items-center gap-3">
+                {/* Paperclip Attachment Button */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingMedia}
+                  className="w-12 h-12 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-indigo-400 flex items-center justify-center font-bold text-lg transition-all flex-shrink-0 disabled:opacity-50"
+                  title="Attach Image or File"
+                >
+                  {uploadingMedia ? '⏳' : '📎'}
+                </button>
+
                 <input
                   type="text"
                   value={inputText}
@@ -462,9 +564,10 @@ const Dashboard = () => {
                   placeholder="Type a message..."
                   className="flex-1 px-4 py-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all"
                 />
+
                 <button
                   type="submit"
-                  disabled={!inputText.trim() || sending}
+                  disabled={(!inputText.trim() && !attachmentDraft) || sending}
                   className="w-12 h-12 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center font-bold shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                 >
                   ➤

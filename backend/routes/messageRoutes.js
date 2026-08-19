@@ -4,11 +4,16 @@ const {
   sendMessage,
   fetchMessages,
   markMessagesAsRead,
+  uploadMessageAttachment,
 } = require('../controllers/messageController');
 const { protect } = require('../middleware/authMiddleware');
+const upload = require('../middleware/uploadMiddleware');
 
 // Send Message Endpoint
 router.post('/', protect, sendMessage);
+
+// Upload Media Attachment Endpoint
+router.post('/upload', protect, upload.single('file'), uploadMessageAttachment);
 
 // Fetch Conversation Messages Endpoint
 router.get('/:conversationId', protect, fetchMessages);

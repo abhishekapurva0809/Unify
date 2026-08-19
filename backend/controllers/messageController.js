@@ -153,7 +153,6 @@ const markMessagesAsRead = async (req, res) => {
   try {
     const { conversationId } = req.params;
 
-    // Update messages in this conversation sent by other users
     await Message.updateMany(
       {
         conversationId,
@@ -166,7 +165,6 @@ const markMessagesAsRead = async (req, res) => {
       }
     );
 
-    // Emit real-time read receipt event to room subscribers
     try {
       const io = getIO();
       io.to(conversationId).emit('messages_read', {
@@ -189,8 +187,44 @@ const markMessagesAsRead = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Upload an image or document file attachment for a chat message
+ * @route   POST /api/v1/messages/upload
+ * @access  Private (Protected by authMiddleware & uploadMiddleware)
+ */
+const uploadMessageAttachment = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select a file to upload',
+      });
+    }
+
+    const isImage = req.file.mimetype.startsWith('image/');
+    const mediaType = isImage ? 'image' : 'file';
+    const mediaUrl = `/uploads/${req.file.filename}`;
+
+    res.status(200).json({
+      success: true,
+      message: 'File attachment uploaded successfully',
+      data: {
+        mediaUrl,
+        mediaType,
+        originalName: req.file.originalname,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error uploading media attachment',
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   fetchMessages,
   markMessagesAsRead,
+  uploadMessageAttachment,
 };
