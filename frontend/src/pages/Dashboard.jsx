@@ -193,9 +193,16 @@ const Dashboard = () => {
         </div>
 
         <div className="flex flex-col gap-6 text-slate-400">
-          <button className="p-3 rounded-xl bg-slate-800 text-indigo-400" title="Chats">
-            💬
-          </button>
+          <div className="relative">
+            <button className="p-3 rounded-xl bg-slate-800 text-indigo-400" title="Chats">
+              💬
+            </button>
+            {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0) > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-slate-900 animate-pulse">
+                {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
+              </span>
+            )}
+          </div>
           <button
             onClick={() => setIsSearchOpen(true)}
             className="p-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all"
@@ -311,15 +318,22 @@ const Dashboard = () => {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 truncate">
-                      {chat.latestMessage
-                        ? chat.latestMessage.mediaUrl
-                          ? chat.latestMessage.mediaType === 'image'
-                            ? '📷 Image attachment'
-                            : '📄 File attachment'
-                          : chat.latestMessage.content
-                        : 'No messages yet'}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-slate-400 truncate flex-1">
+                        {chat.latestMessage
+                          ? chat.latestMessage.mediaUrl
+                            ? chat.latestMessage.mediaType === 'image'
+                              ? '📷 Image attachment'
+                              : '📄 File attachment'
+                            : chat.latestMessage.content
+                          : 'No messages yet'}
+                      </p>
+                      {chat.unreadCount > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold shadow-md shadow-indigo-600/30">
+                          {chat.unreadCount}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

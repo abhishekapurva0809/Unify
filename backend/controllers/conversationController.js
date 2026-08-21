@@ -1,9 +1,10 @@
 const Conversation = require('../models/Conversation');
+const Message = require('../models/Message');
 const User = require('../models/User');
 const { getIO } = require('../config/socket');
 
 /**
- * @desc    Fetch all conversations for the logged in user
+ * @desc    Fetch all conversations for the logged in user with unread message counts
  * @route   GET /api/v1/conversations
  * @access  Private (Protected by authMiddleware)
  */
@@ -23,10 +24,25 @@ const fetchConversations = async (req, res) => {
       })
       .sort({ updatedAt: -1 });
 
+    // Calculate unread count for each conversation dynamically
+    const conversationsWithUnread = await Promise.all(
+      conversations.map(async (conv) => {
+        const unreadCount = await Message.countDocuments({
+          conversationId: conv._id,
+          sender: { $ne: req.user._id },
+          'readBy.user': { $ne: req.user._id },
+        });
+
+        const convObj = conv.toObject();
+        convObj.unreadCount = unreadCount;
+        return convObj;
+      })
+    );
+
     res.status(200).json({
       success: true,
-      count: conversations.length,
-      data: conversations,
+      count: conversationsWithUnread.length,
+      data: conversationsWithUnread,
     });
   } catch (error) {
     res.status(500).json({
@@ -128,7 +144,6 @@ const renameGroup = async (req, res) => {
       });
     }
 
-    // Broadcast updated group details over WebSockets
     try {
       const io = getIO();
       io.to(conversationId).emit('group_updated', updatedGroup);
@@ -165,7 +180,6 @@ const addToGroup = async (req, res) => {
       });
     }
 
-    // Verify requesting user is a group admin
     const isAdmin = group.admins.some((a) => a.toString() === req.user._id.toString());
     if (!isAdmin) {
       return res.status(403).json({
@@ -174,7 +188,6 @@ const addToGroup = async (req, res) => {
       });
     }
 
-    // Add user to participants if not already present
     const updatedGroup = await Conversation.findByIdAndUpdate(
       conversationId,
       { $addToSet: { participants: userId } },
