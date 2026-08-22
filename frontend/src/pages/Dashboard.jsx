@@ -5,6 +5,7 @@ import useChat from '../hooks/useChat';
 import UserSearchModal from '../components/UserSearchModal';
 import CreateGroupModal from '../components/CreateGroupModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
+import MessageSearchModal from '../components/MessageSearchModal';
 import { uploadMediaAttachmentApi } from '../services/messageService';
 
 const Dashboard = () => {
@@ -28,6 +29,7 @@ const Dashboard = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
+  const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [attachmentDraft, setAttachmentDraft] = useState(null);
@@ -203,6 +205,13 @@ const Dashboard = () => {
               </span>
             )}
           </div>
+          <button
+            onClick={() => setIsMessageSearchOpen(true)}
+            className="p-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all text-indigo-400"
+            title="Search Messages"
+          >
+            🔎
+          </button>
           <button
             onClick={() => setIsSearchOpen(true)}
             className="p-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all"
@@ -626,6 +635,18 @@ const Dashboard = () => {
         onGroupUpdated={(updatedGroup) => {
           setSelectedChat(updatedGroup);
           loadConversations();
+        }}
+      />
+
+      {/* Full-Text Message Search Modal */}
+      <MessageSearchModal
+        isOpen={isMessageSearchOpen}
+        onClose={() => setIsMessageSearchOpen(false)}
+        onSelectResult={(searchMsg) => {
+          const conv = searchMsg.conversationId;
+          if (conv) {
+            selectConversation(conv);
+          }
         }}
       />
     </div>

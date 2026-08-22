@@ -61,3 +61,10 @@ export const uploadMediaAttachmentApi = async (formData) => {
   });
   return response.data;
 };
+
+// Search message content across user's conversations
+export const searchMessagesApi = async (query) => {
+  if (!query) return { success: true, data: [] };
+  const response = await API.get(`/messages/search/query?q=${encodeURIComponent(query)}`);
+  return response.data;
+};

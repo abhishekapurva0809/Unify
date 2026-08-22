@@ -21,7 +21,6 @@ const sendMessage = async (req, res) => {
 
     let targetConversationId = conversationId;
 
-    // 1. If conversationId is not provided but recipientId is, find or create 1-to-1 conversation
     if (!targetConversationId && recipientId) {
       let existingChat = await Conversation.findOne({
         isGroup: false,
@@ -45,7 +44,6 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    // 2. Create the message document
     const newMessage = await Message.create({
       sender: req.user._id,
       conversationId: targetConversationId,
@@ -54,12 +52,10 @@ const sendMessage = async (req, res) => {
       mediaType: mediaType || '',
     });
 
-    // 3. Update Conversation's latestMessage reference
     await Conversation.findByIdAndUpdate(targetConversationId, {
       latestMessage: newMessage._id,
     });
 
-    // 4. Populate message details for client response
     let populatedMessage = await Message.findById(newMessage._id)
       .populate('sender', 'name email avatar status')
       .populate({
@@ -71,7 +67,6 @@ const sendMessage = async (req, res) => {
         },
       });
 
-    // 5. Emit real-time Socket.IO event to room participants
     try {
       const io = getIO();
       const conversation = populatedMessage.conversationId;
@@ -222,9 +217,63 @@ const uploadMessageAttachment = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Search message content across user's conversations
+ * @route   GET /api/v1/messages/search/query?q=keyword
+ * @access  Private (Protected by authMiddleware)
+ */
+const searchMessages = async (req, res) => {
+  try {
+    const keyword = req.query.q || req.query.query;
+
+    if (!keyword || !keyword.trim()) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
+    }
+
+    // Find all conversations the user belongs to
+    const userConversations = await Conversation.find({
+      participants: { $elemMatch: { $eq: req.user._id } },
+    }).select('_id');
+
+    const conversationIds = userConversations.map((c) => c._id);
+
+    // Search messages matching keyword regex
+    const messages = await Message.find({
+      conversationId: { $in: conversationIds },
+      content: { $regex: keyword.trim(), $options: 'i' },
+    })
+      .populate('sender', 'name email avatar status')
+      .populate({
+        path: 'conversationId',
+        select: 'name isGroup participants',
+        populate: {
+          path: 'participants',
+          select: 'name email avatar status',
+        },
+      })
+      .sort({ createdAt: -1 })
+      .limit(30);
+
+    res.status(200).json({
+      success: true,
+      count: messages.length,
+      data: messages,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error searching messages',
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   fetchMessages,
   markMessagesAsRead,
   uploadMessageAttachment,
+  searchMessages,
 };
