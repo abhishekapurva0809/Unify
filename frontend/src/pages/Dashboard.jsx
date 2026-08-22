@@ -6,7 +6,8 @@ import UserSearchModal from '../components/UserSearchModal';
 import CreateGroupModal from '../components/CreateGroupModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import MessageSearchModal from '../components/MessageSearchModal';
-import { uploadMediaAttachmentApi } from '../services/messageService';
+import EmojiPicker from '../components/EmojiPicker';
+import { uploadMediaAttachmentApi, toggleMessageReactionApi } from '../services/messageService';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -30,6 +31,7 @@ const Dashboard = () => {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [attachmentDraft, setAttachmentDraft] = useState(null);
@@ -40,6 +42,15 @@ const Dashboard = () => {
   const fileInputRef = useRef(null);
 
   const SOCKET_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090';
+
+  // Toggle emoji reaction on message
+  const handleToggleReaction = async (messageId, reactionEmoji) => {
+    try {
+      await toggleMessageReactionApi(messageId, reactionEmoji);
+    } catch (err) {
+      console.error('Failed to toggle reaction:', err);
+    }
+  };
 
   // Auto-scroll message thread to bottom when messages update or typing occurs
   const scrollToBottom = () => {
@@ -424,9 +435,9 @@ const Dashboard = () => {
                   return (
                     <div
                       key={msg._id}
-                      className={`flex flex-col ${isSentByMe ? 'items-end' : 'items-start'}`}
+                      className={`flex flex-col group relative ${isSentByMe ? 'items-end' : 'items-start'}`}
                     >
-                      <div className="flex items-end gap-2 max-w-[70%]">
+                      <div className="flex items-end gap-2 max-w-[70%] relative">
                         {!isSentByMe && (
                           <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 overflow-hidden flex-shrink-0 mb-1">
                             {msg.sender?.avatar ? (
@@ -441,9 +452,26 @@ const Dashboard = () => {
                           </div>
                         )}
 
+                        {/* Quick Reaction Hover Toolbar */}
+                        <div
+                          className={`absolute -top-7 ${
+                            isSentByMe ? 'right-0' : 'left-9'
+                          } hidden group-hover:flex items-center gap-1 bg-slate-900/90 border border-slate-800 backdrop-blur-md px-2 py-1 rounded-full shadow-lg z-20 animate-in fade-in zoom-in-90 duration-100`}
+                        >
+                          {['👍', '❤️', '😂', '😮', '😢', '🔥'].map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={() => handleToggleReaction(msg._id, emoji)}
+                              className="text-xs hover:scale-125 transition-transform"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+
                         {/* Chat Bubble */}
                         <div
-                          className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                          className={`px-4 py-3 rounded-2xl text-sm leading-relaxed relative ${
                             isSentByMe
                               ? 'bg-indigo-600 text-white rounded-br-xs shadow-md shadow-indigo-600/20'
                               : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-xs'
@@ -479,6 +507,36 @@ const Dashboard = () => {
 
                           {/* Message Content Text */}
                           {msg.content && <p>{msg.content}</p>}
+
+                          {/* Reaction Badges Display */}
+                          {msg.reactions && msg.reactions.length > 0 && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {Object.entries(
+                                msg.reactions.reduce((acc, r) => {
+                                  acc[r.reaction] = (acc[r.reaction] || 0) + 1;
+                                  return acc;
+                                }, {})
+                              ).map(([emoji, count]) => {
+                                const hasUserReacted = msg.reactions.some(
+                                  (r) => (r.user?._id || r.user) === user._id && r.reaction === emoji
+                                );
+                                return (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => handleToggleReaction(msg._id, emoji)}
+                                    className={`px-1.5 py-0.5 rounded-full text-[10px] flex items-center gap-1 border transition-all ${
+                                      hasUserReacted
+                                        ? 'bg-indigo-500/30 border-indigo-400 text-indigo-200'
+                                        : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600'
+                                    }`}
+                                  >
+                                    <span>{emoji}</span>
+                                    {count > 1 && <span className="font-bold">{count}</span>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
 
                           <div
                             className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${
@@ -542,7 +600,17 @@ const Dashboard = () => {
             </div>
 
             {/* Chat Input Footer */}
-            <footer className="p-4 border-t border-slate-800 bg-slate-900/40 backdrop-blur-md">
+            <footer className="p-4 border-t border-slate-800 bg-slate-900/40 backdrop-blur-md relative">
+              {/* Emoji Picker Popover */}
+              <EmojiPicker
+                isOpen={isEmojiPickerOpen}
+                onClose={() => setIsEmojiPickerOpen(false)}
+                onSelectEmoji={(emoji) => {
+                  setInputText((prev) => prev + emoji);
+                  setIsEmojiPickerOpen(false);
+                }}
+              />
+
               {/* Attachment Preview Banner */}
               {attachmentDraft && (
                 <div className="mb-3 p-2.5 rounded-2xl bg-slate-900 border border-indigo-500/40 flex items-center justify-between text-xs text-indigo-300">
@@ -578,6 +646,20 @@ const Dashboard = () => {
                   title="Attach Image or File"
                 >
                   {uploadingMedia ? '⏳' : '📎'}
+                </button>
+
+                {/* Emoji Picker Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
+                  className={`w-12 h-12 rounded-2xl border flex items-center justify-center font-bold text-lg transition-all flex-shrink-0 ${
+                    isEmojiPickerOpen
+                      ? 'bg-indigo-600/20 border-indigo-500 text-indigo-400'
+                      : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-400 hover:text-yellow-400'
+                  }`}
+                  title="Insert Emoji"
+                >
+                  😊
                 </button>
 
                 <input

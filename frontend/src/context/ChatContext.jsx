@@ -201,12 +201,22 @@ export const ChatProvider = ({ children }) => {
       loadConversations();
     };
 
+    // Real-Time Message Reactions Event Listener
+    const handleMessageReactionUpdated = (updatedMessage) => {
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg._id === updatedMessage._id ? updatedMessage : msg
+        )
+      );
+    };
+
     socket.on('message_received', handleMessageReceived);
     socket.on('typing', handleTyping);
     socket.on('stop_typing', handleStopTyping);
     socket.on('messages_read', handleMessagesRead);
     socket.on('group_updated', handleGroupUpdated);
     socket.on('group_created', handleGroupCreated);
+    socket.on('message_reaction_updated', handleMessageReactionUpdated);
 
     return () => {
       socket.off('message_received', handleMessageReceived);
@@ -215,6 +225,7 @@ export const ChatProvider = ({ children }) => {
       socket.off('messages_read', handleMessagesRead);
       socket.off('group_updated', handleGroupUpdated);
       socket.off('group_created', handleGroupCreated);
+      socket.off('message_reaction_updated', handleMessageReactionUpdated);
     };
   }, [socket, socketConnected, selectedChat, loadConversations, markAsRead]);
 

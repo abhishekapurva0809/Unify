@@ -124,6 +124,7 @@ const fetchMessages = async (req, res) => {
 
     const messages = await Message.find({ conversationId })
       .populate('sender', 'name email avatar status')
+      .populate('reactions.user', 'name avatar')
       .sort({ createdAt: 1 });
 
     res.status(200).json({
@@ -233,14 +234,12 @@ const searchMessages = async (req, res) => {
       });
     }
 
-    // Find all conversations the user belongs to
     const userConversations = await Conversation.find({
       participants: { $elemMatch: { $eq: req.user._id } },
     }).select('_id');
 
     const conversationIds = userConversations.map((c) => c._id);
 
-    // Search messages matching keyword regex
     const messages = await Message.find({
       conversationId: { $in: conversationIds },
       content: { $regex: keyword.trim(), $options: 'i' },
@@ -270,10 +269,82 @@ const searchMessages = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Toggle emoji reaction on a message
+ * @route   PUT /api/v1/messages/react/:messageId
+ * @access  Private (Protected by authMiddleware)
+ */
+const toggleMessageReaction = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { reaction } = req.body;
+
+    if (!reaction) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reaction emoji is required',
+      });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found',
+      });
+    }
+
+    const existingReactionIndex = message.reactions.findIndex(
+      (r) => r.user.toString() === req.user._id.toString()
+    );
+
+    if (existingReactionIndex > -1) {
+      if (message.reactions[existingReactionIndex].reaction === reaction) {
+        // Toggle off if same reaction clicked again
+        message.reactions.splice(existingReactionIndex, 1);
+      } else {
+        // Update to new reaction
+        message.reactions[existingReactionIndex].reaction = reaction;
+      }
+    } else {
+      // Add new reaction
+      message.reactions.push({
+        user: req.user._id,
+        reaction,
+      });
+    }
+
+    await message.save();
+
+    const updatedMessage = await Message.findById(message._id)
+      .populate('sender', 'name email avatar status')
+      .populate('reactions.user', 'name avatar');
+
+    // Broadcast updated message reactions over WebSockets
+    try {
+      const io = getIO();
+      io.to(message.conversationId.toString()).emit('message_reaction_updated', updatedMessage);
+    } catch (socketErr) {
+      console.warn('Socket emit warning on reaction update:', socketErr.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedMessage,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error updating reaction',
+    });
+  }
+};
+
 module.exports = {
   sendMessage,
   fetchMessages,
   markMessagesAsRead,
   uploadMessageAttachment,
   searchMessages,
+  toggleMessageReaction,
 };

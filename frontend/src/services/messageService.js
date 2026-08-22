@@ -68,3 +68,9 @@ export const searchMessagesApi = async (query) => {
   const response = await API.get(`/messages/search/query?q=${encodeURIComponent(query)}`);
   return response.data;
 };
+
+// Toggle emoji reaction on a message
+export const toggleMessageReactionApi = async (messageId, reaction) => {
+  const response = await API.put(`/messages/react/${messageId}`, { reaction });
+  return response.data;
+};
