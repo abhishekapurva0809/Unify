@@ -301,9 +301,9 @@ const Dashboard = () => {
                 <div
                   key={chat._id}
                   onClick={() => selectConversation(chat)}
-                  className={`p-3 rounded-2xl flex items-center gap-3 cursor-pointer transition-all ${
+                  className={`p-3 rounded-2xl flex items-center gap-3 cursor-pointer transition-all animate-fade-in ${
                     isSelected
-                      ? 'bg-indigo-600/20 border border-indigo-500/40'
+                      ? 'bg-indigo-600/20 border border-indigo-500/40 shadow-sm shadow-indigo-500/10'
                       : 'hover:bg-slate-800/60 border border-transparent'
                   }`}
                 >
