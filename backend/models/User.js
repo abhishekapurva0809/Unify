@@ -51,24 +51,19 @@ const userSchema = new mongoose.Schema(
 );
 
 /**
- * Pre-save Middleware Hook
+ * Pre-save Middleware Hook (Compatible with Mongoose 8 and 9 async hooks without next callback)
  * Automatically hashes password using bcryptjs before saving document to MongoDB.
  */
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   // Only hash password if it has been modified (or is new)
   if (!this.isModified('password')) {
-    return next();
+    return;
   }
 
-  try {
-    // Generate salt with 10 rounds
-    const salt = await bcrypt.genSalt(10);
-    // Hash password using generated salt
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  // Generate salt with 10 rounds
+  const salt = await bcrypt.genSalt(10);
+  // Hash password using generated salt
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 /**

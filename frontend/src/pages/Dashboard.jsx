@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import useAuth from '../hooks/useAuth';
 import useSocket from '../hooks/useSocket';
 import useChat from '../hooks/useChat';
+import { useTheme } from '../context/ThemeContext';
 import UserSearchModal from '../components/UserSearchModal';
 import CreateGroupModal from '../components/CreateGroupModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
@@ -11,6 +12,7 @@ import { uploadMediaAttachmentApi, toggleMessageReactionApi } from '../services/
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { socketConnected } = useSocket();
   const {
     conversations,
@@ -180,19 +182,19 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="h-screen bg-slate-950 text-white flex overflow-hidden selection:bg-indigo-500 selection:text-white">
+    <div className="h-screen bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-white flex overflow-hidden selection:bg-indigo-500 selection:text-white transition-colors duration-200">
       {/* 1. Leftmost Navigation Bar */}
-      <aside className="w-20 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-6 justify-between z-10">
+      <aside className="w-20 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col items-center py-6 justify-between z-10 transition-colors">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30 text-white">
             U
           </div>
           {/* Socket Live Indicator */}
           <div
             className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
               socketConnected
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 dark:text-emerald-400'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-500 dark:text-amber-400'
             }`}
             title={socketConnected ? 'WebSockets Live' : 'Connecting to WebSockets...'}
           >
@@ -205,34 +207,44 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="flex flex-col gap-6 text-slate-400">
+        <div className="flex flex-col gap-5 text-slate-400 items-center">
           <div className="relative">
-            <button className="p-3 rounded-xl bg-slate-800 text-indigo-400" title="Chats">
+            <button className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400" title="Chats">
               💬
             </button>
             {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0) > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-slate-900 animate-pulse">
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white dark:border-slate-900 animate-pulse">
                 {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
               </span>
             )}
           </div>
           <button
             onClick={() => setIsMessageSearchOpen(true)}
-            className="p-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all text-indigo-400"
+            className="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-white transition-all text-slate-500 dark:text-indigo-400"
             title="Search Messages"
           >
             🔎
           </button>
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="p-3 rounded-xl hover:bg-slate-800 hover:text-white transition-all"
+            className="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-white transition-all text-slate-500 dark:text-slate-400"
             title="Search Users"
           >
             🔍
           </button>
+
+          {/* Light / Dark Mode Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-amber-500 transition-all text-slate-500 dark:text-slate-400 text-lg"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+
           <button
             onClick={logout}
-            className="p-3 rounded-xl hover:bg-slate-800 hover:text-red-400 transition-all"
+            className="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-red-500 transition-all text-slate-500 dark:text-slate-400"
             title="Sign Out"
           >
             🚪
@@ -241,7 +253,7 @@ const Dashboard = () => {
 
         {/* User Profile Avatar */}
         <div
-          className="w-10 h-10 rounded-full bg-indigo-600/40 border border-indigo-500/50 flex items-center justify-center text-sm font-semibold text-indigo-300 overflow-hidden cursor-pointer"
+          className="w-10 h-10 rounded-full bg-indigo-600/20 dark:bg-indigo-600/40 border border-indigo-400/50 dark:border-indigo-500/50 flex items-center justify-center text-sm font-semibold text-indigo-600 dark:text-indigo-300 overflow-hidden cursor-pointer"
           title={user?.name}
         >
           {user?.avatar ? (
@@ -257,19 +269,19 @@ const Dashboard = () => {
       </aside>
 
       {/* 2. Middle Conversations List Column */}
-      <section className="w-80 bg-slate-900/50 border-r border-slate-800 flex flex-col">
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <h2 className="text-xl font-bold tracking-tight">Messages</h2>
+      <section className="w-80 bg-white/80 dark:bg-slate-900/50 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-colors">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Messages</h2>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsGroupModalOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white text-xs font-semibold transition-all"
+              className="px-2.5 py-1.5 rounded-xl bg-purple-600/15 hover:bg-purple-600 text-purple-600 dark:text-purple-300 hover:text-white text-xs font-semibold transition-all"
             >
               + Group
             </button>
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-semibold transition-all"
+              className="px-2.5 py-1.5 rounded-xl bg-indigo-600/15 hover:bg-indigo-600 text-indigo-600 dark:text-indigo-400 hover:text-white text-xs font-semibold transition-all"
             >
               + Chat
             </button>
@@ -303,11 +315,11 @@ const Dashboard = () => {
                   onClick={() => selectConversation(chat)}
                   className={`p-3 rounded-2xl flex items-center gap-3 cursor-pointer transition-all animate-fade-in ${
                     isSelected
-                      ? 'bg-indigo-600/20 border border-indigo-500/40 shadow-sm shadow-indigo-500/10'
-                      : 'hover:bg-slate-800/60 border border-transparent'
+                      ? 'bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/40 shadow-sm shadow-indigo-500/10'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-transparent'
                   }`}
                 >
-                  <div className="relative w-11 h-11 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 overflow-hidden flex-shrink-0">
+                  <div className="relative w-11 h-11 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 overflow-hidden flex-shrink-0">
                     {chatAvatar ? (
                       <img
                         src={`${SOCKET_URL}${chatAvatar}`}
@@ -319,8 +331,8 @@ const Dashboard = () => {
                     )}
                     {partner && (
                       <span
-                        className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-900 ${
-                          partner.status === 'online' ? 'bg-emerald-500' : 'bg-slate-500'
+                        className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
+                          partner.status === 'online' ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-500'
                         }`}
                       />
                     )}
@@ -328,9 +340,9 @@ const Dashboard = () => {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-0.5">
-                      <h4 className="text-sm font-semibold truncate text-white">{chatName}</h4>
+                      <h4 className="text-sm font-semibold truncate text-slate-900 dark:text-white">{chatName}</h4>
                       {chat.latestMessage && (
-                        <span className="text-[10px] text-slate-500">
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
                           {new Date(chat.latestMessage.createdAt).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -339,7 +351,7 @@ const Dashboard = () => {
                       )}
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-slate-400 truncate flex-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1">
                         {chat.latestMessage
                           ? chat.latestMessage.mediaUrl
                             ? chat.latestMessage.mediaType === 'image'
@@ -363,13 +375,13 @@ const Dashboard = () => {
       </section>
 
       {/* 3. Main Active Chat Window */}
-      <main className="flex-1 bg-slate-950 flex flex-col">
+      <main className="flex-1 bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors">
         {selectedChat ? (
           <>
             {/* Active Chat Header */}
-            <header className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/40 backdrop-blur-md">
+            <header className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white/80 dark:bg-slate-900/40 backdrop-blur-md">
               <div className="flex items-center gap-3">
-                <div className="relative w-10 h-10 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-300 font-bold overflow-hidden">
+                <div className="relative w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-600/30 border border-indigo-200 dark:border-indigo-500/40 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold overflow-hidden">
                   {getChatAvatar(selectedChat) ? (
                     <img
                       src={`${SOCKET_URL}${getChatAvatar(selectedChat)}`}
@@ -381,17 +393,17 @@ const Dashboard = () => {
                   )}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white leading-tight">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
                     {getChatName(selectedChat)}
                   </h3>
-                  <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                     {isTyping ? (
-                      <span className="text-indigo-400 font-semibold flex items-center gap-1">
+                      <span className="text-indigo-600 dark:text-indigo-400 font-semibold flex items-center gap-1">
                         <span>typing</span>
                         <span className="flex gap-0.5">
-                          <span className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          <span className="w-1 h-1 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1 h-1 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1 h-1 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </span>
                       </span>
                     ) : selectedChat.isGroup ? (
@@ -409,7 +421,7 @@ const Dashboard = () => {
               {selectedChat.isGroup && (
                 <button
                   onClick={() => setIsGroupSettingsOpen(true)}
-                  className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5"
+                  className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-all text-xs font-semibold flex items-center gap-1.5 border border-slate-200 dark:border-transparent"
                   title="Group Settings"
                 >
                   <span>⚙️</span>
@@ -456,7 +468,7 @@ const Dashboard = () => {
                         <div
                           className={`absolute -top-7 ${
                             isSentByMe ? 'right-0' : 'left-9'
-                          } hidden group-hover:flex items-center gap-1 bg-slate-900/90 border border-slate-800 backdrop-blur-md px-2 py-1 rounded-full shadow-lg z-20 animate-in fade-in zoom-in-90 duration-100`}
+                          } hidden group-hover:flex items-center gap-1 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 backdrop-blur-md px-2 py-1 rounded-full shadow-lg z-20 animate-in fade-in zoom-in-90 duration-100`}
                         >
                           {['👍', '❤️', '😂', '😮', '😢', '🔥'].map((emoji) => (
                             <button
@@ -474,12 +486,12 @@ const Dashboard = () => {
                           className={`px-4 py-3 rounded-2xl text-sm leading-relaxed relative ${
                             isSentByMe
                               ? 'bg-indigo-600 text-white rounded-br-xs shadow-md shadow-indigo-600/20'
-                              : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-xs'
+                              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-xs shadow-xs'
                           }`}
                         >
                           {/* Image Attachment Rendering */}
                           {msg.mediaUrl && msg.mediaType === 'image' && (
-                            <div className="mb-2 rounded-xl overflow-hidden border border-slate-700/50">
+                            <div className="mb-2 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700/50">
                               <img
                                 src={`${SOCKET_URL}${msg.mediaUrl}`}
                                 alt="Attachment"
@@ -491,14 +503,14 @@ const Dashboard = () => {
 
                           {/* File Attachment Rendering */}
                           {msg.mediaUrl && msg.mediaType === 'file' && (
-                            <div className="mb-2 p-2.5 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center gap-2">
+                            <div className="mb-2 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center gap-2">
                               <span>📄</span>
                               <a
                                 href={`${SOCKET_URL}${msg.mediaUrl}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 download
-                                className="text-xs text-indigo-300 underline font-semibold hover:text-white truncate max-w-xs"
+                                className="text-xs text-indigo-600 dark:text-indigo-300 underline font-semibold hover:text-indigo-800 dark:hover:text-white truncate max-w-xs"
                               >
                                 View / Download Attachment
                               </a>
@@ -526,8 +538,8 @@ const Dashboard = () => {
                                     onClick={() => handleToggleReaction(msg._id, emoji)}
                                     className={`px-1.5 py-0.5 rounded-full text-[10px] flex items-center gap-1 border transition-all ${
                                       hasUserReacted
-                                        ? 'bg-indigo-500/30 border-indigo-400 text-indigo-200'
-                                        : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:border-slate-600'
+                                        ? 'bg-indigo-500/20 dark:bg-indigo-500/30 border-indigo-400 text-indigo-600 dark:text-indigo-200'
+                                        : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-400'
                                     }`}
                                   >
                                     <span>{emoji}</span>
@@ -540,7 +552,7 @@ const Dashboard = () => {
 
                           <div
                             className={`text-[10px] mt-1 flex items-center justify-end gap-1 ${
-                              isSentByMe ? 'text-indigo-200/80' : 'text-slate-500'
+                              isSentByMe ? 'text-indigo-200/90' : 'text-slate-400 dark:text-slate-500'
                             }`}
                           >
                             <span>
@@ -577,7 +589,7 @@ const Dashboard = () => {
               {/* Animated Typing Dots Indicator Bubble */}
               {isTyping && (
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 overflow-hidden">
+                  <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300 overflow-hidden">
                     {getChatAvatar(selectedChat) ? (
                       <img
                         src={`${SOCKET_URL}${getChatAvatar(selectedChat)}`}
@@ -588,10 +600,10 @@ const Dashboard = () => {
                       getChatName(selectedChat).charAt(0).toUpperCase()
                     )}
                   </div>
-                  <div className="px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-indigo-400 flex items-center gap-1.5 rounded-bl-xs">
-                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-indigo-500 flex items-center gap-1.5 rounded-bl-xs shadow-xs">
+                    <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               )}
@@ -600,7 +612,7 @@ const Dashboard = () => {
             </div>
 
             {/* Chat Input Footer */}
-            <footer className="p-4 border-t border-slate-800 bg-slate-900/40 backdrop-blur-md relative">
+            <footer className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/40 backdrop-blur-md relative transition-colors">
               {/* Emoji Picker Popover */}
               <EmojiPicker
                 isOpen={isEmojiPickerOpen}
@@ -613,7 +625,7 @@ const Dashboard = () => {
 
               {/* Attachment Preview Banner */}
               {attachmentDraft && (
-                <div className="mb-3 p-2.5 rounded-2xl bg-slate-900 border border-indigo-500/40 flex items-center justify-between text-xs text-indigo-300">
+                <div className="mb-3 p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-indigo-400 dark:border-indigo-500/40 flex items-center justify-between text-xs text-indigo-600 dark:text-indigo-300">
                   <div className="flex items-center gap-2 truncate">
                     <span>{attachmentDraft.mediaType === 'image' ? '📷' : '📄'}</span>
                     <span className="font-semibold truncate">
@@ -623,7 +635,7 @@ const Dashboard = () => {
                   <button
                     type="button"
                     onClick={() => setAttachmentDraft(null)}
-                    className="w-6 h-6 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold"
+                    className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center text-xs font-bold"
                   >
                     ×
                   </button>
@@ -642,7 +654,7 @@ const Dashboard = () => {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingMedia}
-                  className="w-12 h-12 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-indigo-400 flex items-center justify-center font-bold text-lg transition-all flex-shrink-0 disabled:opacity-50"
+                  className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-center font-bold text-lg transition-all flex-shrink-0 disabled:opacity-50"
                   title="Attach Image or File"
                 >
                   {uploadingMedia ? '⏳' : '📎'}
@@ -654,8 +666,8 @@ const Dashboard = () => {
                   onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
                   className={`w-12 h-12 rounded-2xl border flex items-center justify-center font-bold text-lg transition-all flex-shrink-0 ${
                     isEmojiPickerOpen
-                      ? 'bg-indigo-600/20 border-indigo-500 text-indigo-400'
-                      : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-400 hover:text-yellow-400'
+                      ? 'bg-indigo-100 dark:bg-indigo-600/20 border-indigo-400 dark:border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                      : 'bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-yellow-500'
                   }`}
                   title="Insert Emoji"
                 >
@@ -667,7 +679,7 @@ const Dashboard = () => {
                   value={inputText}
                   onChange={handleInputChange}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all"
+                  className="flex-1 px-4 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all"
                 />
 
                 <button
