@@ -27,17 +27,55 @@ initSocket(server);
 // Security Middleware: Helmet HTTP Headers Configuration
 app.use(
   helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allows static images in uploads folder to render in cross-origin frontend
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
 
-// Security Middleware: MongoDB Operator Injection Sanitization
-app.use(mongoSanitize());
+// Middleware: CORS Configuration (Support both localhost and 127.0.0.1)
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
+    credentials: true,
+  })
+);
+
+// Middleware: Body Parsers
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Security Middleware: MongoDB Operator Injection Sanitization (Express 5 compatible in-place sanitizer)
+app.use((req, res, next) => {
+  if (req.body) mongoSanitize.sanitize(req.body);
+  if (req.params) mongoSanitize.sanitize(req.params);
+  next();
+});
+
+// Request Logger in Development
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    console.log(`📡 [${req.method}] ${req.originalUrl}`);
+    next();
+  });
+}
 
 // Security Middleware: Rate Limiting Configuration
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes window
-  max: 200, // Limit each IP to 200 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -47,8 +85,8 @@ const apiLimiter = rateLimit({
 });
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes window
-  max: 20, // Limit each IP to 20 auth login/register requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -57,19 +95,6 @@ const authLimiter = rateLimit({
   },
 });
 
-// Middleware: CORS Configuration
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true,
-  })
-);
-
-// Middleware: Body Parsers for JSON and URL-encoded payloads
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Apply Rate Limiters
 app.use('/api/v1', apiLimiter);
 app.use('/api/v1/auth', authLimiter);
 
@@ -91,8 +116,8 @@ app.use('/api/v1/messages', require('./routes/messageRoutes'));
 app.use(notFound);
 app.use(errorHandler);
 
-// Start Server (Express + Socket.IO on shared HTTP Port)
+// Start Server (Listen on 0.0.0.0 to support both IPv4 and IPv6)
 const PORT = process.env.PORT || 8090;
-server.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on http://localhost:${PORT}`);
 });

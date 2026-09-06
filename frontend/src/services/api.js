@@ -2,10 +2,13 @@ import axios from 'axios';
 
 /**
  * Centralized Axios HTTP Client Configuration
- * Uses environment variable VITE_API_BASE_URL (defaults to http://localhost:8090/api/v1)
+ * Uses environment variable VITE_API_URL or VITE_API_BASE_URL (defaults to http://localhost:8090/api/v1)
  */
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8090/api/v1',
+  baseURL:
+    import.meta.env.VITE_API_URL ||
+    import.meta.env.VITE_API_BASE_URL ||
+    'http://localhost:8090/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
