@@ -114,15 +114,15 @@ const GroupSettingsModal = ({ isOpen, onClose, chat, onGroupUpdated }) => {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span>⚙️</span> Group Details
           </h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all"
           >
             ✕
           </button>
@@ -130,7 +130,7 @@ const GroupSettingsModal = ({ isOpen, onClose, chat, onGroupUpdated }) => {
 
         {/* Error Alert */}
         {error && (
-          <div className="mx-5 mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+          <div className="mx-5 mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 dark:text-red-400 text-xs flex items-center gap-2">
             <span>⚠️</span>
             <span>{error}</span>
           </div>
@@ -139,14 +139,14 @@ const GroupSettingsModal = ({ isOpen, onClose, chat, onGroupUpdated }) => {
         <div className="p-5 space-y-6 flex-1 overflow-y-auto">
           {/* Group Title Section */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Group Title</label>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Group Title</label>
             <form onSubmit={handleRename} className="flex gap-2">
               <input
                 type="text"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
                 disabled={!isAdmin}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm transition-all disabled:opacity-60"
+                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm transition-all disabled:opacity-60"
               />
               {isAdmin && (
                 <button
@@ -163,18 +163,18 @@ const GroupSettingsModal = ({ isOpen, onClose, chat, onGroupUpdated }) => {
           {/* Add Member Field (Admins only) */}
           {isAdmin && (
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Add New Member</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Add New Member</label>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search user by name or email..."
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm transition-all"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm transition-all"
               />
 
               {/* Add Member Search Results */}
               {searchResults.length > 0 && (
-                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto p-1 bg-slate-800/60 rounded-xl border border-slate-700">
+                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto p-1 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
                   {searchResults.map((u) => {
                     const isAlreadyMember = chat.participants?.some(
                       (p) => (p._id || p) === u._id
@@ -186,13 +186,13 @@ const GroupSettingsModal = ({ isOpen, onClose, chat, onGroupUpdated }) => {
                         className={`p-2 rounded-lg flex items-center justify-between text-xs cursor-pointer ${
                           isAlreadyMember
                             ? 'opacity-40 cursor-not-allowed'
-                            : 'hover:bg-slate-700/60 text-white'
+                            : 'hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-900 dark:text-white'
                         }`}
                       >
                         <span>
                           {u.name} ({u.email})
                         </span>
-                        <span className="font-semibold text-indigo-400">
+                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">
                           {isAlreadyMember ? 'Joined' : '+ Add'}
                         </span>
                       </div>
@@ -205,7 +205,7 @@ const GroupSettingsModal = ({ isOpen, onClose, chat, onGroupUpdated }) => {
 
           {/* Group Members List */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-2">
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
               Group Members ({chat.participants?.length || 0})
             </label>
             <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -217,23 +217,23 @@ const GroupSettingsModal = ({ isOpen, onClose, chat, onGroupUpdated }) => {
                 return (
                   <div
                     key={memberId}
-                    className="p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 flex items-center justify-between"
+                    className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 flex items-center justify-between"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-xs font-bold text-indigo-300">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-600/30 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-300">
                         {member.name ? member.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                       <div>
-                        <h5 className="text-xs font-semibold text-white flex items-center gap-1.5">
+                        <h5 className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
                           <span>{member.name || 'User'}</span>
                           {isMe && <span className="text-[10px] text-slate-400">(You)</span>}
                           {isMemberAdmin && (
-                            <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 text-[9px] font-bold">
+                            <span className="px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[9px] font-bold">
                               Admin
                             </span>
                           )}
                         </h5>
-                        <p className="text-[10px] text-slate-400">{member.email}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">{member.email}</p>
                       </div>
                     </div>
 
@@ -242,7 +242,7 @@ const GroupSettingsModal = ({ isOpen, onClose, chat, onGroupUpdated }) => {
                       <button
                         onClick={() => handleRemoveMember(memberId)}
                         disabled={loading}
-                        className="px-2.5 py-1 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white text-[11px] font-semibold transition-all disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-500 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:text-white text-[11px] font-semibold transition-all disabled:opacity-50"
                       >
                         {isMe ? 'Leave Group' : 'Remove'}
                       </button>

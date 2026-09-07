@@ -7,6 +7,7 @@ import UserSearchModal from '../components/UserSearchModal';
 import CreateGroupModal from '../components/CreateGroupModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import MessageSearchModal from '../components/MessageSearchModal';
+import ProfileSettingsModal from '../components/ProfileSettingsModal';
 import EmojiPicker from '../components/EmojiPicker';
 import { uploadMediaAttachmentApi, toggleMessageReactionApi } from '../services/messageService';
 
@@ -34,6 +35,7 @@ const Dashboard = () => {
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
@@ -42,6 +44,7 @@ const Dashboard = () => {
   const [chatToDelete, setChatToDelete] = useState(null);
   const [deletingChat, setDeletingChat] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [conversationFilter, setConversationFilter] = useState('');
 
   const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -116,6 +119,17 @@ const Dashboard = () => {
     }
     return conversations;
   }, [conversations, selectedChat, user]);
+
+  // Filtered list based on real-time search filter input
+  const filteredConversations = useMemo(() => {
+    if (!conversationFilter.trim()) return displayedConversations;
+    const q = conversationFilter.toLowerCase();
+    return displayedConversations.filter((chat) => {
+      const name = getChatName(chat).toLowerCase();
+      const latest = chat.latestMessage?.content?.toLowerCase() || '';
+      return name.includes(q) || latest.includes(q);
+    });
+  }, [displayedConversations, conversationFilter]);
 
   // Input Change Handler with Typing Debounce
   const handleInputChange = (e) => {
@@ -257,84 +271,85 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="flex flex-col gap-5 text-slate-400 items-center">
-          <div className="relative">
-            <button className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400" title="Chats">
-              💬
-            </button>
-            {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0) > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white dark:border-slate-900 animate-pulse">
-                {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
-              </span>
+        {/* User Profile Avatar Button */}
+        <button
+          type="button"
+          onClick={() => setIsSettingsOpen(true)}
+          className="relative w-11 h-11 rounded-full cursor-pointer hover:ring-2 hover:ring-indigo-500 hover:scale-105 transition-all group focus:outline-none flex-shrink-0"
+          title={`${user?.name || 'Profile'} (Click to open Settings)`}
+        >
+          <div className="w-full h-full rounded-full bg-indigo-100 dark:bg-indigo-600/30 border border-indigo-200 dark:border-indigo-500/50 flex items-center justify-center text-sm font-bold text-indigo-600 dark:text-indigo-300 overflow-hidden shadow-inner">
+            {user?.avatar ? (
+              <img
+                src={`${SOCKET_URL}${user.avatar}`}
+                alt={user.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              user?.name?.charAt(0).toUpperCase() || 'U'
             )}
           </div>
-          <button
-            onClick={() => setIsMessageSearchOpen(true)}
-            className="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-white transition-all text-slate-500 dark:text-indigo-400"
-            title="Search Messages"
-          >
-            🔎
-          </button>
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-white transition-all text-slate-500 dark:text-slate-400"
-            title="Search Users"
-          >
-            🔍
-          </button>
-
-          {/* Light / Dark Mode Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            className="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-amber-500 transition-all text-slate-500 dark:text-slate-400 text-lg"
-            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
-
-          <button
-            onClick={logout}
-            className="p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-red-500 transition-all text-slate-500 dark:text-slate-400"
-            title="Sign Out"
-          >
-            🚪
-          </button>
-        </div>
-
-        {/* User Profile Avatar */}
-        <div
-          className="w-10 h-10 rounded-full bg-indigo-600/20 dark:bg-indigo-600/40 border border-indigo-400/50 dark:border-indigo-500/50 flex items-center justify-center text-sm font-semibold text-indigo-600 dark:text-indigo-300 overflow-hidden cursor-pointer"
-          title={user?.name}
-        >
-          {user?.avatar ? (
-            <img
-              src={`${SOCKET_URL}${user.avatar}`}
-              alt={user.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            user?.name?.charAt(0).toUpperCase() || 'U'
-          )}
-        </div>
+          {/* Prominent, Clearly Visible Online Status Dot */}
+          <span
+            className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 shadow-md ring-1 ring-emerald-400/80 z-20"
+            title="Online"
+          />
+        </button>
       </aside>
 
       {/* 2. Middle Conversations List Column */}
-      <section className="w-80 bg-white/80 dark:bg-slate-900/50 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-colors">
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Messages</h2>
-          <div className="flex items-center gap-1.5">
+      <section className="w-96 lg:w-[410px] bg-white/80 dark:bg-slate-900/50 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Messages</h2>
             <button
               onClick={() => setIsGroupModalOpen(true)}
               className="px-2.5 py-1.5 rounded-xl bg-purple-600/15 hover:bg-purple-600 text-purple-600 dark:text-purple-300 hover:text-white text-xs font-semibold transition-all"
             >
               + Group
             </button>
+          </div>
+
+          {/* Quick Search Action Buttons: Search Users & Search Chats */}
+          <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setIsSearchOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl bg-indigo-600/15 hover:bg-indigo-600 text-indigo-600 dark:text-indigo-400 hover:text-white text-xs font-semibold transition-all"
+              className="px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-600/15 hover:bg-indigo-600 text-indigo-600 dark:text-indigo-400 hover:text-white border border-indigo-200/60 dark:border-indigo-500/30 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shadow-xs"
+              title="Search users to start a chat"
             >
-              + Chat
+              <span>🔍</span>
+              <span>Search Users</span>
             </button>
+            <button
+              onClick={() => setIsMessageSearchOpen(true)}
+              className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shadow-xs"
+              title="Search chat history and messages"
+            >
+              <span>💬</span>
+              <span>Search Chats</span>
+            </button>
+          </div>
+
+          {/* Real-Time Filter Bar */}
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">
+              🔎
+            </span>
+            <input
+              type="text"
+              value={conversationFilter}
+              onChange={(e) => setConversationFilter(e.target.value)}
+              placeholder="Filter chats by name..."
+              className="w-full pl-8 pr-7 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 transition-all"
+            />
+            {conversationFilter && (
+              <button
+                onClick={() => setConversationFilter('')}
+                className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
@@ -352,8 +367,18 @@ const Dashboard = () => {
                 Search & Start Chat
               </button>
             </div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="py-12 text-center text-slate-500 text-sm flex flex-col items-center gap-2">
+              <p>No chats found matching "{conversationFilter}"</p>
+              <button
+                onClick={() => setConversationFilter('')}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+              >
+                Clear filter
+              </button>
+            </div>
           ) : (
-            displayedConversations.map((chat) => {
+            filteredConversations.map((chat) => {
               const isSelected = selectedChat && selectedChat._id === chat._id;
               const chatName = getChatName(chat);
               const chatAvatar = getChatAvatar(chat);
@@ -369,20 +394,22 @@ const Dashboard = () => {
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-transparent'
                   }`}
                 >
-                  <div className="relative w-11 h-11 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 overflow-hidden flex-shrink-0">
-                    {chatAvatar ? (
-                      <img
-                        src={`${SOCKET_URL}${chatAvatar}`}
-                        alt={chatName}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      chatName.charAt(0).toUpperCase()
-                    )}
+                  <div className="relative w-11 h-11 flex-shrink-0">
+                    <div className="w-full h-full rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 overflow-hidden shadow-xs">
+                      {chatAvatar ? (
+                        <img
+                          src={`${SOCKET_URL}${chatAvatar}`}
+                          alt={chatName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        chatName.charAt(0).toUpperCase()
+                      )}
+                    </div>
                     {partner && (
                       <span
-                        className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                          partner.status === 'online' ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-500'
+                        className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 z-10 shadow-sm ${
+                          partner.status === 'online' ? 'bg-emerald-500 ring-1 ring-emerald-400/80' : 'bg-slate-400 dark:bg-slate-500'
                         }`}
                       />
                     )}
@@ -776,12 +803,12 @@ const Dashboard = () => {
             </footer>
           </>
         ) : (
-          <div className="text-center max-w-sm">
-            <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-2xl mx-auto mb-4">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-center text-2xl mx-auto mb-4">
               💬
             </div>
-            <h3 className="text-lg font-bold text-slate-300 mb-2">Your Messages</h3>
-            <p className="text-sm text-slate-500">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Your Messages</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
               Select a contact or search users to start messaging in real-time.
             </p>
           </div>
@@ -825,6 +852,12 @@ const Dashboard = () => {
             selectConversation(conv);
           }
         }}
+      />
+
+      {/* User Profile & Settings Modal */}
+      <ProfileSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
 
       {/* Delete Chat Confirmation Modal */}

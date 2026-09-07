@@ -4,7 +4,8 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('unify_theme') || 'dark';
+    const saved = localStorage.getItem('unify_theme_v2');
+    return saved || 'light';
   });
 
   useEffect(() => {
@@ -14,6 +15,7 @@ export const ThemeProvider = ({ children }) => {
     } else {
       root.classList.remove('dark');
     }
+    localStorage.setItem('unify_theme_v2', theme);
     localStorage.setItem('unify_theme', theme);
   }, [theme]);
 
