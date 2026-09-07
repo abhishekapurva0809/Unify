@@ -74,3 +74,9 @@ export const toggleMessageReactionApi = async (messageId, reaction) => {
   const response = await API.put(`/messages/react/${messageId}`, { reaction });
   return response.data;
 };
+
+// Delete a conversation and all its messages
+export const deleteConversationApi = async (conversationId) => {
+  const response = await API.delete(`/conversations/${conversationId}`);
+  return response.data;
+};

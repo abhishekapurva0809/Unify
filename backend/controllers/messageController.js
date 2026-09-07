@@ -71,10 +71,15 @@ const sendMessage = async (req, res) => {
       const io = getIO();
       const conversation = populatedMessage.conversationId;
 
+      // Broadcast to active conversation room
+      io.to(targetConversationId.toString()).emit('message_received', populatedMessage);
+
+      // Also notify each participant in their private user room
       if (conversation && conversation.participants) {
         conversation.participants.forEach((participant) => {
-          if (participant._id.toString() !== req.user._id.toString()) {
-            io.to(participant._id.toString()).emit('message_received', populatedMessage);
+          const participantId = participant._id ? participant._id.toString() : participant.toString();
+          if (participantId !== req.user._id.toString()) {
+            io.to(participantId).emit('message_received', populatedMessage);
           }
         });
       }

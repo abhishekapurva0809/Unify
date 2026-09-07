@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import useAuth from '../hooks/useAuth';
 import useSocket from '../hooks/useSocket';
 import useChat from '../hooks/useChat';
@@ -27,6 +27,7 @@ const Dashboard = () => {
     sendStopTyping,
     loadConversations,
     setSelectedChat,
+    deleteConversation,
   } = useChat();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -38,6 +39,9 @@ const Dashboard = () => {
   const [sending, setSending] = useState(false);
   const [attachmentDraft, setAttachmentDraft] = useState(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState(null);
+  const [deletingChat, setDeletingChat] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -65,9 +69,16 @@ const Dashboard = () => {
 
   // Helper to extract conversation partner for 1-to-1 chats
   const getChatPartner = (chat) => {
-    if (!chat || !chat.participants) return null;
+    if (!chat) return null;
     if (chat.isGroup) return null;
-    return chat.participants.find((p) => p._id !== user._id) || chat.participants[0];
+    if (chat.targetUser) return chat.targetUser;
+    if (!chat.participants || !Array.isArray(chat.participants)) return null;
+    return (
+      chat.participants.find((p) => {
+        const pid = p._id ? p._id.toString() : p.toString();
+        return pid !== (user?._id ? user._id.toString() : '');
+      }) || chat.participants[0]
+    );
   };
 
   // Helper to get conversation display name
@@ -85,6 +96,26 @@ const Dashboard = () => {
     const partner = getChatPartner(chat);
     return partner ? partner.avatar : '';
   };
+
+  // Combined list of conversations ensuring active conversation always shows in sidebar
+  const displayedConversations = React.useMemo(() => {
+    if (!selectedChat) return conversations;
+    const selectedPartner = getChatPartner(selectedChat);
+    const exists = conversations.some((c) => {
+      if (c._id && selectedChat._id && c._id === selectedChat._id) return true;
+      if (!c.isGroup && !selectedChat.isGroup && c.participants && selectedPartner) {
+        return c.participants.some(
+          (p) => (p._id ? p._id.toString() : p.toString()) === (selectedPartner._id || selectedPartner).toString()
+        );
+      }
+      return false;
+    });
+
+    if (!exists) {
+      return [selectedChat, ...conversations];
+    }
+    return conversations;
+  }, [conversations, selectedChat, user]);
 
   // Input Change Handler with Typing Debounce
   const handleInputChange = (e) => {
@@ -124,23 +155,24 @@ const Dashboard = () => {
 
   // Select user from Search Modal
   const handleSelectUserFromSearch = async (targetUser) => {
-    const existingChat = conversations.find(
-      (c) =>
-        !c.isGroup &&
-        c.participants &&
-        c.participants.some((p) => p._id === targetUser._id)
-    );
+    const existingChat = conversations.find((c) => {
+      if (c.isGroup || !c.participants) return false;
+      return c.participants.some(
+        (p) => (p._id ? p._id.toString() : p.toString()) === targetUser._id.toString()
+      );
+    });
 
     if (existingChat) {
       selectConversation(existingChat);
     } else {
       const tempChat = {
+        _id: `temp-${targetUser._id}`,
         isGroup: false,
         name: targetUser.name,
         participants: [user, targetUser],
         targetUser,
       };
-      setSelectedChat(tempChat);
+      selectConversation(tempChat);
     }
   };
 
@@ -164,20 +196,38 @@ const Dashboard = () => {
     try {
       setSending(true);
 
-      if (selectedChat && selectedChat._id) {
-        await sendMessage({ content: messageText, mediaUrl, mediaType });
-      } else if (selectedChat && selectedChat.targetUser) {
-        await sendMessage({
-          recipientId: selectedChat.targetUser._id,
-          content: messageText,
-          mediaUrl,
-          mediaType,
-        });
-      }
+      const targetRecId =
+        selectedChat?.targetUser?._id ||
+        (selectedChat && !selectedChat._id && selectedChat.participants
+          ? selectedChat.participants.find((p) => (p._id || p) !== user._id)?._id
+          : undefined);
+
+      await sendMessage({
+        conversationId: selectedChat?._id,
+        recipientId: targetRecId,
+        content: messageText,
+        mediaUrl,
+        mediaType,
+      });
     } catch (error) {
       console.error('Failed to send message:', error);
     } finally {
       setSending(false);
+    }
+  };
+
+  // Confirm delete conversation
+  const handleConfirmDeleteChat = async () => {
+    if (!chatToDelete) return;
+    try {
+      setDeletingChat(true);
+      setDeleteError('');
+      await deleteConversation(chatToDelete._id);
+      setChatToDelete(null);
+    } catch (err) {
+      setDeleteError(err.response?.data?.message || err.message || 'Failed to delete chat');
+    } finally {
+      setDeletingChat(false);
     }
   };
 
@@ -292,7 +342,7 @@ const Dashboard = () => {
         <div className="flex-1 overflow-y-auto p-3 space-y-1">
           {loadingConversations ? (
             <div className="py-12 text-center text-slate-500 text-sm">Loading conversations...</div>
-          ) : conversations.length === 0 ? (
+          ) : displayedConversations.length === 0 ? (
             <div className="py-12 text-center text-slate-500 text-sm flex flex-col items-center gap-3">
               <p>No active conversations yet</p>
               <button
@@ -303,7 +353,7 @@ const Dashboard = () => {
               </button>
             </div>
           ) : (
-            conversations.map((chat) => {
+            displayedConversations.map((chat) => {
               const isSelected = selectedChat && selectedChat._id === chat._id;
               const chatName = getChatName(chat);
               const chatAvatar = getChatAvatar(chat);
@@ -313,7 +363,7 @@ const Dashboard = () => {
                 <div
                   key={chat._id}
                   onClick={() => selectConversation(chat)}
-                  className={`p-3 rounded-2xl flex items-center gap-3 cursor-pointer transition-all animate-fade-in ${
+                  className={`p-3 rounded-2xl flex items-center gap-3 cursor-pointer transition-all animate-fade-in group ${
                     isSelected
                       ? 'bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/40 shadow-sm shadow-indigo-500/10'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-transparent'
@@ -360,11 +410,27 @@ const Dashboard = () => {
                             : chat.latestMessage.content
                           : 'No messages yet'}
                       </p>
-                      {chat.unreadCount > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold shadow-md shadow-indigo-600/30">
-                          {chat.unreadCount}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {chat.unreadCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold shadow-md shadow-indigo-600/30">
+                            {chat.unreadCount}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteError('');
+                            setChatToDelete(chat);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/20 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all"
+                          title="Delete Chat"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -417,17 +483,34 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Group Settings Button */}
-              {selectedChat.isGroup && (
+              <div className="flex items-center gap-2">
+                {/* Group Settings Button */}
+                {selectedChat.isGroup && (
+                  <button
+                    onClick={() => setIsGroupSettingsOpen(true)}
+                    className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-all text-xs font-semibold flex items-center gap-1.5 border border-slate-200 dark:border-transparent"
+                    title="Group Settings"
+                  >
+                    <span>⚙️</span>
+                    <span className="hidden sm:inline">Settings</span>
+                  </button>
+                )}
+
+                {/* Delete Chat Button */}
                 <button
-                  onClick={() => setIsGroupSettingsOpen(true)}
-                  className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-all text-xs font-semibold flex items-center gap-1.5 border border-slate-200 dark:border-transparent"
-                  title="Group Settings"
+                  onClick={() => {
+                    setDeleteError('');
+                    setChatToDelete(selectedChat);
+                  }}
+                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-500/20 text-slate-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-all text-xs font-semibold flex items-center gap-1.5 border border-slate-200 dark:border-transparent"
+                  title="Delete Chat"
                 >
-                  <span>⚙️</span>
-                  <span>Settings</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span className="hidden sm:inline">Delete</span>
                 </button>
-              )}
+              </div>
             </header>
 
             {/* Scrollable Message Thread Area */}
@@ -743,6 +826,65 @@ const Dashboard = () => {
           }
         }}
       />
+
+      {/* Delete Chat Confirmation Modal */}
+      {chatToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 flex flex-col gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center text-2xl mx-auto">
+              🗑️
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                Delete Chat?
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                {chatToDelete.isGroup
+                  ? `Are you sure you want to delete the group "${getChatName(chatToDelete)}"? This will remove the conversation and all messages for all participants.`
+                  : `Are you sure you want to delete your chat with "${getChatName(chatToDelete)}"? All messages will be permanently removed.`}
+              </p>
+            </div>
+
+            {deleteError && (
+              <div className="p-3 text-xs text-red-500 dark:text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl text-center">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                disabled={deletingChat}
+                onClick={() => {
+                  setChatToDelete(null);
+                  setDeleteError('');
+                }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingChat}
+                onClick={handleConfirmDeleteChat}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-lg shadow-red-600/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deletingChat ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  'Delete Chat'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

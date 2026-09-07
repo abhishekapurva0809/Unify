@@ -6,6 +6,7 @@ import {
   fetchMessagesApi,
   sendMessageApi,
   markMessagesAsReadApi,
+  deleteConversationApi,
 } from '../services/messageService';
 
 export const ChatContext = createContext();
@@ -58,6 +59,11 @@ export const ChatProvider = ({ children }) => {
       setIsTyping(false);
       const chatId = chat._id;
 
+      if (!chatId || (typeof chatId === 'string' && chatId.startsWith('temp-'))) {
+        setMessages([]);
+        return;
+      }
+
       // Join socket room
       joinChat(chatId);
 
@@ -81,11 +87,25 @@ export const ChatProvider = ({ children }) => {
   );
 
   // 3. Send Message Action
-  const sendMessage = async ({ content, mediaUrl, mediaType, recipientId }) => {
+  const sendMessage = async ({ content, mediaUrl, mediaType, recipientId, conversationId }) => {
     try {
+      const rawConvId = conversationId || (selectedChat && selectedChat._id ? selectedChat._id : undefined);
+      const isTemp = typeof rawConvId === 'string' && rawConvId.startsWith('temp-');
+      const targetConvId = isTemp ? undefined : rawConvId;
+
+      const targetRecId =
+        recipientId ||
+        (selectedChat?.targetUser ? selectedChat.targetUser._id : undefined) ||
+        (!targetConvId && selectedChat?.participants
+          ? selectedChat.participants.find((p) => {
+              const pid = p._id ? p._id.toString() : p.toString();
+              return pid !== (user?._id ? user._id.toString() : '');
+            })?._id
+          : undefined);
+
       const payload = {
-        conversationId: selectedChat ? selectedChat._id : undefined,
-        recipientId: !selectedChat ? recipientId : undefined,
+        conversationId: targetConvId,
+        recipientId: targetRecId,
         content,
         mediaUrl,
         mediaType,
@@ -95,23 +115,26 @@ export const ChatProvider = ({ children }) => {
       if (response.success) {
         const newMsg = response.data;
 
-        // Append to active message thread
-        setMessages((prev) => [...prev, newMsg]);
+        // Append to active message thread immediately (avoid duplicates)
+        setMessages((prev) => {
+          if (prev.some((m) => m._id === newMsg._id)) return prev;
+          return [...prev, newMsg];
+        });
 
         // Stop typing indicator on message send
-        if (selectedChat && socket && socketConnected) {
-          socket.emit('stop_typing', selectedChat._id);
+        if (targetConvId && socket && socketConnected) {
+          socket.emit('stop_typing', targetConvId);
         }
 
         // Refresh conversation feed
         await loadConversations();
 
-        // If starting new conversation, set as active
-        if (!selectedChat && newMsg.conversationId) {
+        // If starting a brand new conversation, set the real persisted conversation object as active
+        if ((!targetConvId || isTemp) && newMsg.conversationId) {
           const conversationObj =
             typeof newMsg.conversationId === 'object'
               ? newMsg.conversationId
-              : { _id: newMsg.conversationId };
+              : { _id: newMsg.conversationId, isGroup: false };
           setSelectedChat(conversationObj);
           joinChat(conversationObj._id);
         }
@@ -136,7 +159,36 @@ export const ChatProvider = ({ children }) => {
     }
   }, [socket, socketConnected, selectedChat]);
 
-  // 5. Real-Time Socket Event Listeners
+  // 5. Delete Conversation Action
+  const deleteConversation = useCallback(
+    async (conversationId) => {
+      try {
+        if (typeof conversationId === 'string' && conversationId.startsWith('temp-')) {
+          if (selectedChat && selectedChat._id === conversationId) {
+            setSelectedChat(null);
+            setMessages([]);
+          }
+          return { success: true };
+        }
+
+        const response = await deleteConversationApi(conversationId);
+        if (response.success) {
+          if (selectedChat && selectedChat._id === conversationId) {
+            setSelectedChat(null);
+            setMessages([]);
+          }
+          setConversations((prev) => prev.filter((c) => c._id !== conversationId));
+        }
+        return response;
+      } catch (error) {
+        console.error('Error deleting conversation:', error.message);
+        throw error;
+      }
+    },
+    [selectedChat]
+  );
+
+  // 6. Real-Time Socket Event Listeners
   useEffect(() => {
     if (!socket || !socketConnected) return;
 
@@ -210,6 +262,16 @@ export const ChatProvider = ({ children }) => {
       );
     };
 
+    // Real-Time Conversation Deleted Event Listener
+    const handleConversationDeleted = ({ conversationId }) => {
+      console.log('⚡ REALTIME: Conversation deleted:', conversationId);
+      if (selectedChat && selectedChat._id === conversationId) {
+        setSelectedChat(null);
+        setMessages([]);
+      }
+      setConversations((prev) => prev.filter((c) => c._id !== conversationId));
+    };
+
     socket.on('message_received', handleMessageReceived);
     socket.on('typing', handleTyping);
     socket.on('stop_typing', handleStopTyping);
@@ -217,6 +279,7 @@ export const ChatProvider = ({ children }) => {
     socket.on('group_updated', handleGroupUpdated);
     socket.on('group_created', handleGroupCreated);
     socket.on('message_reaction_updated', handleMessageReactionUpdated);
+    socket.on('conversation_deleted', handleConversationDeleted);
 
     return () => {
       socket.off('message_received', handleMessageReceived);
@@ -226,6 +289,7 @@ export const ChatProvider = ({ children }) => {
       socket.off('group_updated', handleGroupUpdated);
       socket.off('group_created', handleGroupCreated);
       socket.off('message_reaction_updated', handleMessageReactionUpdated);
+      socket.off('conversation_deleted', handleConversationDeleted);
     };
   }, [socket, socketConnected, selectedChat, loadConversations, markAsRead]);
 
@@ -245,6 +309,7 @@ export const ChatProvider = ({ children }) => {
         markAsRead,
         loadConversations,
         setSelectedChat,
+        deleteConversation,
       }}
     >
       {children}

@@ -11,7 +11,7 @@ const { getIO } = require('../config/socket');
 const fetchConversations = async (req, res) => {
   try {
     const conversations = await Conversation.find({
-      participants: { $elemMatch: { $eq: req.user._id } },
+      participants: req.user._id,
     })
       .populate('participants', 'name email avatar status lastSeen')
       .populate('admins', 'name email avatar')
@@ -272,10 +272,86 @@ const removeFromGroup = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Delete a conversation and all its messages
+ * @route   DELETE /api/v1/conversations/:id
+ * @access  Private (Protected by authMiddleware)
+ */
+const deleteConversation = async (req, res) => {
+  try {
+    const { id: conversationId } = req.params;
+
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Conversation not found',
+      });
+    }
+
+    const userIdStr = req.user._id.toString();
+    const isParticipant = conversation.participants.some(
+      (p) => p.toString() === userIdStr
+    );
+
+    if (!isParticipant) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this conversation',
+      });
+    }
+
+    if (conversation.isGroup) {
+      const isAdmin = conversation.admins.some(
+        (a) => a.toString() === userIdStr
+      );
+      if (!isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: 'Only group admins can delete this group chat',
+        });
+      }
+    }
+
+    // Delete all messages belonging to this conversation
+    await Message.deleteMany({ conversationId });
+
+    // Delete the conversation document
+    await Conversation.findByIdAndDelete(conversationId);
+
+    // Socket real-time broadcast to participants
+    try {
+      const io = getIO();
+      conversation.participants.forEach((participantId) => {
+        io.to(participantId.toString()).emit('conversation_deleted', {
+          conversationId,
+        });
+      });
+      io.to(conversationId.toString()).emit('conversation_deleted', {
+        conversationId,
+      });
+    } catch (socketErr) {
+      console.warn('Socket emit warning on delete conversation:', socketErr.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Conversation deleted successfully',
+      data: { conversationId },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server Error deleting conversation',
+    });
+  }
+};
+
 module.exports = {
   fetchConversations,
   createGroupChat,
   renameGroup,
   addToGroup,
   removeFromGroup,
+  deleteConversation,
 };
