@@ -3,6 +3,10 @@
 **Unify** is a production-ready, full-stack real-time messaging application engineered with the MERN stack (MongoDB, Express, React, Node.js) and powered by Socket.IO for instant, event-driven communication.
 
 ---
+## 🌐 Live Demo
+
+[Visit Unify](https://unify-saqp.vercel.app/
+)
 
 ## ✨ Features
 
