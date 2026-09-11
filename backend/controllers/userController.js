@@ -97,11 +97,12 @@ const searchUsers = async (req, res) => {
       });
     }
 
-    // Build regex search filter matching name or email (case-insensitive)
+    // Build regex search filter matching name or email (case-insensitive & safely escaped)
+    const escapedKeyword = keyword.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const searchFilter = {
       $or: [
-        { name: { $regex: keyword, $options: 'i' } },
-        { email: { $regex: keyword, $options: 'i' } },
+        { name: { $regex: escapedKeyword, $options: 'i' } },
+        { email: { $regex: escapedKeyword, $options: 'i' } },
       ],
       // Exclude the currently logged-in user from search results
       _id: { $ne: req.user._id },

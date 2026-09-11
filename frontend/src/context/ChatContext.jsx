@@ -249,7 +249,7 @@ export const ChatProvider = ({ children }) => {
       loadConversations();
     };
 
-    const handleGroupCreated = (newGroup) => {
+    const handleGroupCreated = () => {
       loadConversations();
     };
 

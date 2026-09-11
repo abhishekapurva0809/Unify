@@ -244,10 +244,11 @@ const searchMessages = async (req, res) => {
     }).select('_id');
 
     const conversationIds = userConversations.map((c) => c._id);
+    const escapedKeyword = keyword.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     const messages = await Message.find({
       conversationId: { $in: conversationIds },
-      content: { $regex: keyword.trim(), $options: 'i' },
+      content: { $regex: escapedKeyword, $options: 'i' },
     })
       .populate('sender', 'name email avatar status')
       .populate({

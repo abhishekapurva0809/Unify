@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import useAuth from '../hooks/useAuth';
 import useSocket from '../hooks/useSocket';
 import useChat from '../hooks/useChat';
-import { useTheme } from '../context/ThemeContext';
 import UserSearchModal from '../components/UserSearchModal';
 import CreateGroupModal from '../components/CreateGroupModal';
 import GroupSettingsModal from '../components/GroupSettingsModal';
@@ -13,8 +12,7 @@ import { uploadMediaAttachmentApi, toggleMessageReactionApi } from '../services/
 import { SOCKET_URL } from '../config';
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const { socketConnected } = useSocket();
   const {
     conversations,
@@ -70,7 +68,7 @@ const Dashboard = () => {
   }, [messages, isTyping, attachmentDraft]);
 
   // Helper to extract conversation partner for 1-to-1 chats
-  const getChatPartner = (chat) => {
+  const getChatPartner = useCallback((chat) => {
     if (!chat) return null;
     if (chat.isGroup) return null;
     if (chat.targetUser) return chat.targetUser;
@@ -81,26 +79,26 @@ const Dashboard = () => {
         return pid !== (user?._id ? user._id.toString() : '');
       }) || chat.participants[0]
     );
-  };
+  }, [user]);
 
   // Helper to get conversation display name
-  const getChatName = (chat) => {
+  const getChatName = useCallback((chat) => {
     if (!chat) return '';
     if (chat.isGroup) return chat.name || 'Group Chat';
     const partner = getChatPartner(chat);
     return partner ? partner.name : 'Unknown User';
-  };
+  }, [getChatPartner]);
 
   // Helper to get conversation display avatar
-  const getChatAvatar = (chat) => {
+  const getChatAvatar = useCallback((chat) => {
     if (!chat) return '';
     if (chat.isGroup) return '';
     const partner = getChatPartner(chat);
     return partner ? partner.avatar : '';
-  };
+  }, [getChatPartner]);
 
   // Combined list of conversations ensuring active conversation always shows in sidebar
-  const displayedConversations = React.useMemo(() => {
+  const displayedConversations = useMemo(() => {
     if (!selectedChat) return conversations;
     const selectedPartner = getChatPartner(selectedChat);
     const exists = conversations.some((c) => {
@@ -117,7 +115,7 @@ const Dashboard = () => {
       return [selectedChat, ...conversations];
     }
     return conversations;
-  }, [conversations, selectedChat, user]);
+  }, [conversations, selectedChat, getChatPartner]);
 
   // Filtered list based on real-time search filter input
   const filteredConversations = useMemo(() => {
@@ -128,7 +126,7 @@ const Dashboard = () => {
       const latest = chat.latestMessage?.content?.toLowerCase() || '';
       return name.includes(q) || latest.includes(q);
     });
-  }, [displayedConversations, conversationFilter]);
+  }, [displayedConversations, conversationFilter, getChatName]);
 
   // Input Change Handler with Typing Debounce
   const handleInputChange = (e) => {
