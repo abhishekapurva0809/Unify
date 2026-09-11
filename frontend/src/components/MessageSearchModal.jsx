@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { searchMessagesApi } from '../services/messageService';
+import { SOCKET_URL } from '../config';
 
 const MessageSearchModal = ({ isOpen, onClose, onSelectResult }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const SOCKET_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090';
 
   useEffect(() => {
     if (!query.trim()) {

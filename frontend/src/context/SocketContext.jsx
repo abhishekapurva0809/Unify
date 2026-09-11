@@ -1,10 +1,9 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import useAuth from '../hooks/useAuth';
+import { SOCKET_URL } from '../config';
 
 export const SocketContext = createContext();
-
-const SOCKET_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090';
 
 export const SocketProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth();

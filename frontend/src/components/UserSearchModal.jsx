@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { searchUsersApi } from '../services/userService';
+import { SOCKET_URL } from '../config';
 
 const UserSearchModal = ({ isOpen, onClose, onSelectUser }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,7 +109,7 @@ const UserSearchModal = ({ isOpen, onClose, onSelectUser }) => {
                   <div className="relative w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-600/30 border border-indigo-200 dark:border-indigo-500/40 flex items-center justify-center text-indigo-600 dark:text-indigo-300 font-bold overflow-hidden">
                     {targetUser.avatar ? (
                       <img
-                        src={`${import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090'}${targetUser.avatar}`}
+                        src={`${SOCKET_URL}${targetUser.avatar}`}
                         alt={targetUser.name}
                         className="w-full h-full object-cover"
                       />

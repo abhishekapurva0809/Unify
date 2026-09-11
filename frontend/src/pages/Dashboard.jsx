@@ -10,6 +10,7 @@ import MessageSearchModal from '../components/MessageSearchModal';
 import ProfileSettingsModal from '../components/ProfileSettingsModal';
 import EmojiPicker from '../components/EmojiPicker';
 import { uploadMediaAttachmentApi, toggleMessageReactionApi } from '../services/messageService';
+import { SOCKET_URL } from '../config';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -49,8 +50,6 @@ const Dashboard = () => {
   const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
-
-  const SOCKET_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090';
 
   // Toggle emoji reaction on message
   const handleToggleReaction = async (messageId, reactionEmoji) => {

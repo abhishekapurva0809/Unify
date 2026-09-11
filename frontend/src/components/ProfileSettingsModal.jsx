@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import useAuth from '../hooks/useAuth';
 import { useTheme } from '../context/ThemeContext';
 import { updateUserProfileApi, uploadAvatarApi } from '../services/userService';
+import { SOCKET_URL } from '../config';
 
 const ProfileSettingsModal = ({ isOpen, onClose }) => {
   const { user, logout, updateUser } = useAuth();
@@ -20,7 +21,6 @@ const ProfileSettingsModal = ({ isOpen, onClose }) => {
   const [errorMessage, setErrorMessage] = useState('');
 
   const avatarInputRef = useRef(null);
-  const SOCKET_URL = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:8090';
 
   if (!isOpen) return null;
 
